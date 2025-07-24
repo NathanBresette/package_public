@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RStudio AI Assistant</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        /* Access Code Section */
+        .access-section {
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .access-section h2 {
+            margin: 0 0 20px 0;
+            color: #333;
+        }
+        .access-input {
+            width: 100%;
+            max-width: 300px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .access-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .validate-btn {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .validate-btn:hover {
+            background: #5a6fd8;
+        }
+        .validate-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .access-status {
+            margin-top: 15px;
+            font-weight: 600;
+        }
+        .access-status.success {
+            color: #28a745;
+        }
+        .access-status.error {
+            color: #dc3545;
+        }
+        
+        /* Chat Interface (initially hidden) */
+        .chat-interface {
+            display: none;
+        }
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        .user-message {
+            background: #e3f2fd;
+            margin-left: auto;
+            text-align: right;
+        }
+        .ai-message {
+            background: #f5f5f5;
+            margin-right: auto;
+        }
+        .input-container {
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .prompt-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: none;
+            min-height: 40px;
+            max-height: 120px;
+        }
+        .prompt-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .send-btn {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .send-btn:hover {
+            background: #5a6fd8;
+        }
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .insert-btn {
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .insert-btn:hover {
+            background: #218838;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 RStudio AI Assistant</h1>
+            <p>Chat with AI while coding - non-blocking experience</p>
+        </div>
+        
+        <!-- Access Code Section -->
+        <div class="access-section" id="accessSection">
+            <h2>🔒 Enter Access Code</h2>
+            <p>Please enter your access code to start using the AI assistant.</p>
+            <input type="text" id="accessCodeInput" class="access-input" placeholder="Enter your access code" />
+            <button id="validateBtn" class="validate-btn">Validate Access</button>
+            <div id="accessStatus" class="access-status"></div>
+        </div>
+        
+        <!-- Chat Interface -->
+        <div class="chat-interface" id="chatInterface">
+            <div class="chat-container" id="chatContainer">
+                <div class="message ai-message">
+                    Hello! I'm your AI assistant. Ask me anything about R, data analysis, or coding!
+                </div>
+            </div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>AI is thinking...</div>
+            </div>
+            <div class="input-container">
+                <textarea 
+                    class="prompt-input" 
+                    id="promptInput" 
+                    placeholder="Ask me anything about R, data analysis, or coding..."
+                    rows="1"
+                ></textarea>
+                <button class="send-btn" id="sendBtn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const backendUrl = "https://rgent.onrender.com";
+        const plumberUrl = "http://127.0.0.1:8888/insert_code"; // This will be dynamically replaced
+        
+        const accessSection = document.getElementById('accessSection');
+        const chatInterface = document.getElementById('chatInterface');
+        const accessCodeInput = document.getElementById('accessCodeInput');
+        const validateBtn = document.getElementById('validateBtn');
+        const accessStatus = document.getElementById('accessStatus');
+        const chatContainer = document.getElementById('chatContainer');
+        const promptInput = document.getElementById('promptInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const loading = document.getElementById('loading');
+        
+        let currentAccessCode = null;
+        
+        // Access code validation
+        validateBtn.addEventListener('click', validateAccessCode);
+        accessCodeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                validateAccessCode();
+            }
+        });
+        
+        async function validateAccessCode() {
+            const accessCode = accessCodeInput.value.trim();
+            if (!accessCode) {
+                showAccessStatus('Please enter an access code', 'error');
+                return;
+            }
+            
+            validateBtn.disabled = true;
+            validateBtn.textContent = 'Validating...';
+            
+            console.log('Validating access code:', accessCode);
+            console.log('Backend URL:', backendUrl);
+            
+            try {
+                const response = await fetch(`${backendUrl}/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Origin': window.location.origin
+                    },
+                    mode: 'cors',
+                    body: JSON.stringify({ access_code: accessCode })
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    currentAccessCode = accessCode;
+                    showAccessStatus(`✅ Access granted - Welcome ${data.user || 'User'}!`, 'success');
+                    setTimeout(() => {
+                        accessSection.style.display = 'none';
+                        chatInterface.style.display = 'block';
+                        promptInput.focus();
+                    }, 1500);
+                } else {
+                    const errorText = await response.text();
+                    console.log('Error response:', errorText);
+                    showAccessStatus('❌ Invalid access code', 'error');
+                }
+            } catch (error) {
+                console.error('Validation error:', error);
+                showAccessStatus('❌ Error validating access code', 'error');
+            } finally {
+                validateBtn.disabled = false;
+                validateBtn.textContent = 'Validate Access';
+            }
+        }
+        
+        function showAccessStatus(message, type) {
+            accessStatus.textContent = message;
+            accessStatus.className = `access-status ${type}`;
+        }
+        
+        // Auto-resize textarea
+        promptInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+        
+        // Send message on Enter (but allow Shift+Enter for new lines)
+        promptInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        sendBtn.addEventListener('click', sendMessage);
+        
+        function addMessage(content, isUser = false, code = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            
+            if (isUser) {
+                messageDiv.textContent = content;
+            } else {
+                messageDiv.innerHTML = content.replace(/\n/g, '<br>');
+                
+                // Add insert button if there's code
+                if (code) {
+                    const insertBtn = document.createElement('button');
+                    insertBtn.className = 'insert-btn';
+                    insertBtn.textContent = '📋 Insert Code';
+                    insertBtn.onclick = () => insertCode(code);
+                    messageDiv.appendChild(insertBtn);
+                }
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        async function sendMessage() {
+            if (!currentAccessCode) {
+                addMessage('❌ Please validate your access code first', false);
+                return;
+            }
+            
+            const message = promptInput.value.trim();
+            if (!message) return;
+            
+            // Add user message
+            addMessage(message, true);
+            promptInput.value = '';
+            promptInput.style.height = 'auto';
+            
+            // Show loading
+            loading.style.display = 'block';
+            sendBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`${backendUrl}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Origin': window.location.origin
+                    },
+                    mode: 'cors',
+                    body: JSON.stringify({
+                        access_code: currentAccessCode,
+                        prompt: message,
+                        context_data: {
+                            timestamp: new Date().toISOString(),
+                            source: "rstudio_addin_viewer"
+                        },
+                        context_type: "general"
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Extract code if present
+                let code = null;
+                let content = data.response || data.message || 'No response received';
+                
+                // Look for code blocks in the response
+                const codeMatch = content.match(/```(?:r)?\n([\s\S]*?)```/);
+                if (codeMatch) {
+                    code = codeMatch[1].trim();
+                    content = content.replace(/```(?:r)?\n[\s\S]*?```/g, '');
+                }
+                
+                addMessage(content, false, code);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage(`❌ Error: ${error.message}`, false);
+            } finally {
+                loading.style.display = 'none';
+                sendBtn.disabled = false;
+                promptInput.focus();
+            }
+        }
+        
+        async function insertCode(code) {
+            try {
+                const response = await fetch(plumberUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                if (data.success) {
+                    console.log('Code inserted successfully');
+                } else {
+                    console.error('Failed to insert code:', data.error);
+                }
+            } catch (error) {
+                console.error('Error inserting code:', error);
+            }
+        }
+        
+        // Focus access code input on load
+        accessCodeInput.focus();
+    </script>
+</body>
+</html> 
+ 
