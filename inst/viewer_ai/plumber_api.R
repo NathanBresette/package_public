@@ -24,63 +24,44 @@ function() {
       })
     }
     
-    # Get console history as a simple list of strings
+    # Get console history as a simple string (temporarily simplified)
     console_history <- tryCatch({
       history_file <- Sys.getenv("R_HISTFILE", file.path(Sys.getenv("HOME"), ".Rhistory"))
       if (file.exists(history_file)) {
-        as.list(readLines(history_file, n = 50))
+        paste(readLines(history_file, n = 10), collapse = "; ")
       } else {
-        list("Console History: Not available")
+        "Console History: Not available"
       }
     }, error = function(e) {
-      list("Console History: Error reading")
+      "Console History: Error reading"
     })
     
-    # Get workspace objects as a simple dictionary with string values only
+    # Get workspace objects as a simple string (temporarily simplified)
     workspace_objects <- tryCatch({
       objects <- ls(envir = .GlobalEnv)
       if (length(objects) > 0) {
-        obj_dict <- list()
-        for (obj in objects) {
+        obj_summaries <- sapply(objects, function(obj) {
           tryCatch({
             val <- get(obj, envir = .GlobalEnv)
-            
-            # Create simple object info with string values only
-            obj_info <- list(
-              type = if ("data.frame" %in% class(val)) "dataframe" else if (is.vector(val)) "vector" else if (is.list(val)) "list" else if (is.function(val)) "function" else "other",
-              size = if (is.data.frame(val)) paste(nrow(val), "rows,", ncol(val), "cols") else as.character(length(val)),
-              class = paste(class(val), collapse = ", ")
-            )
-            
-            # Add simple type-specific details as strings only
-            if (is.data.frame(val)) {
-              obj_info$columns <- paste(colnames(val), collapse = ", ")
-              obj_info$data_types <- paste(sapply(val, function(x) paste(class(x), collapse = ", ")), collapse = ", ")
-            } else if (is.vector(val) && length(val) > 0) {
-              obj_info$vector_type <- class(val)[1]
-              obj_info$sample_values <- paste(as.character(head(val, 5)), collapse = ", ")
-            } else if (is.list(val)) {
-              obj_info$length <- as.character(length(val))
-              obj_info$names <- paste(names(val), collapse = ", ")
-            } else if (is.function(val)) {
-              obj_info$arguments <- paste(names(formals(val)), collapse = ", ")
-            }
-            
-            obj_dict[[obj]] <- obj_info
-          }, error = function(e) {
-            obj_dict[[obj]] <<- list(type = "error", size = "unknown", class = "error", error = e$message)
-          })
-        }
-        obj_dict
+            class_info <- paste(class(val), collapse = ", ")
+            size_info <- if (is.data.frame(val)) paste(nrow(val), "rows,", ncol(val), "cols") else length(val)
+            paste(obj, ":", class_info, "(", size_info, ")")
+          }, error = function(e) paste(obj, ": Error getting info"))
+        })
+        paste(obj_summaries, collapse = "; ")
       } else {
-        list()
+        "No workspace objects"
       }
     }, error = function(e) {
-      list(error = paste("Error reading workspace objects:", e$message))
+      paste("Error reading workspace objects:", e$message)
     })
     
-    # Get environment information as a simple dictionary with string values
+    # Get environment information as a simple string
     environment_info <- tryCatch({
+      r_version <- paste("R Version:", R.version.string)
+      platform <- paste("Platform:", R.version$platform)
+      wd <- paste("Working Directory:", getwd())
+      
       # Get loaded packages as a simple string
       loaded_packages <- tryCatch({
         pkgs <- names(sessionInfo()$otherPkgs)
@@ -91,22 +72,15 @@ function() {
               paste(pkg, "v", version)
             }, error = function(e) pkg)
           })
-          paste(pkg_versions, collapse = ", ")
+          paste("Loaded Packages:", paste(pkg_versions, collapse = ", "))
         } else {
-          "No packages loaded"
+          "Loaded Packages: None"
         }
-      }, error = function(e) {
-        paste("Error reading packages:", e$message)
-      })
+      }, error = function(e) paste("Loaded Packages: Error reading"))
       
-      list(
-        r_version = as.character(R.version.string),
-        platform = as.character(R.version$platform),
-        working_directory = as.character(getwd()),
-        packages = loaded_packages
-      )
+      paste(r_version, platform, wd, loaded_packages, sep = "; ")
     }, error = function(e) {
-      list(error = paste("Error reading environment info:", e$message))
+      paste("Error reading environment info:", e$message)
     })
     
     # Get custom functions as a simple string
@@ -119,9 +93,9 @@ function() {
         }, error = function(e) FALSE)
       })]
       if (length(funcs) > 0) {
-        paste(funcs, collapse = ", ")
+        paste("Custom Functions:", paste(funcs, collapse = ", "))
       } else {
-        "No custom functions"
+        "Custom Functions: None"
       }
     }, error = function(e) {
       paste("Error reading functions:", e$message)
@@ -136,9 +110,9 @@ function() {
         }, error = function(e) FALSE)
       })]
       if (length(plot_objects) > 0) {
-        paste(plot_objects, collapse = ", ")
+        paste("Plot Objects:", paste(plot_objects, collapse = ", "))
       } else {
-        "No plot objects"
+        "Plot Objects: None"
       }
     }, error = function(e) {
       paste("Error reading plot history:", e$message)
@@ -166,15 +140,15 @@ function() {
       paste("Error reading error history:", e$message)
     })
     
-    # Return context in the format expected by the backend with string values only
+    # Return context with all values as simple strings
     list(
       document_content = as.character(document_content),
-      console_history = console_history,
-      workspace_objects = workspace_objects,
-      environment_info = environment_info,
-      custom_functions = custom_functions,
-      plot_history = plot_history,
-      error_history = error_history,
+      console_history = as.character(console_history),
+      workspace_objects = as.character(workspace_objects),
+      environment_info = as.character(environment_info),
+      custom_functions = as.character(custom_functions),
+      plot_history = as.character(plot_history),
+      error_history = as.character(error_history),
       timestamp = as.character(Sys.time()),
       source = "rstudio_plumber_context"
     )

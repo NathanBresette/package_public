@@ -216,6 +216,16 @@
                     if (contextResponse.ok) {
                         contextData = await contextResponse.json();
                         console.log('Captured context:', contextData);
+                        
+                        // Debug: Check for list values in context
+                        console.log('=== CONTEXT DEBUG ===');
+                        for (const [key, value] of Object.entries(contextData)) {
+                            console.log(`${key}:`, typeof value, value);
+                            if (Array.isArray(value)) {
+                                console.log(`  ${key} is array with ${value.length} items:`, value);
+                            }
+                        }
+                        console.log('=== END DEBUG ===');
                     }
                 } catch (contextError) {
                     console.log('Could not capture context:', contextError.message);
@@ -228,6 +238,8 @@
                     context_data: contextData,
                     context_type: "general"
                 };
+                
+                console.log('Sending request body:', requestBody);
                 
                 const response = await fetch(`${backendUrl}/chat`, {
                     method: 'POST',
