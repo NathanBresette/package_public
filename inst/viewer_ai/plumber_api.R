@@ -8,17 +8,7 @@ library(jsonlite)
 # Configure jsonlite to auto-unbox single values to prevent array wrapping
 options(jsonlite.auto_unbox = TRUE)
 
-# Custom JSON serializer to ensure proper formatting
-custom_json_serializer <- function(val, req, res, errorHandler) {
-  # Convert the result to JSON with explicit auto_unbox
-  json_string <- jsonlite::toJSON(val, auto_unbox = TRUE, pretty = FALSE)
-  
-  # Set content type
-  res$setHeader("Content-Type", "application/json")
-  
-  # Return the JSON string
-  return(json_string)
-}
+
 
 #* @get /
 #* @serializer html
@@ -33,7 +23,7 @@ function() {
 }
 
 #* @get /context
-#* @serializer custom_json_serializer
+#* @serializer json
 function() {
   tryCatch({
     # Get document content as a simple string
@@ -196,7 +186,10 @@ function() {
       source = "rstudio_plumber_context"
     )
     
-    # Explicitly ensure single values are not wrapped in arrays
+    # Convert to JSON and back to ensure proper formatting
+    json_string <- jsonlite::toJSON(result, auto_unbox = TRUE, pretty = FALSE)
+    result <- jsonlite::fromJSON(json_string)
+    
     result
     
   }, error = function(e) {
@@ -209,7 +202,7 @@ function() {
 }
 
 #* @post /insert_code
-#* @serializer custom_json_serializer
+#* @serializer json
 function(req) {
   code <- req$body$code
   tryCatch({
@@ -221,7 +214,7 @@ function(req) {
 }
 
 #* @get /health
-#* @serializer custom_json_serializer
+#* @serializer json
 function() {
   list(status = "healthy", service = "rstudio-plumber-api")
 }
