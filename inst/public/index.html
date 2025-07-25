@@ -425,6 +425,7 @@
                 <button class="btn" onclick="refreshStats()">Refresh Stats</button>
                 <button class="btn" onclick="clearContext()">Clear Context</button>
                 <button class="btn" onclick="startNewConversation()">New Conversation</button>
+                <div id="rstudio-status" class="status info hidden">Checking RStudio connection...</div>
             </div>
 
             <!-- Chat Container -->
@@ -514,6 +515,9 @@
         function createCodeBlock(code, language = 'r') {
             const blockId = 'code-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
             
+            // Clean up the code formatting
+            let cleanCode = code.trim();
+            
             return `
                 <div class="code-block">
                     <div class="code-header">
@@ -523,7 +527,7 @@
                             <button class="code-btn success" onclick="insertCode('${blockId}')">Insert</button>
                         </div>
                     </div>
-                    <div id="${blockId}" class="code-content">${escapeHtml(code)}</div>
+                    <div id="${blockId}" class="code-content">${escapeHtml(cleanCode)}</div>
                 </div>
             `;
         }
@@ -536,25 +540,39 @@
 
         function copyCode(blockId) {
             const codeElement = document.getElementById(blockId);
-            const text = codeElement.textContent;
+            // Get the raw text content and preserve formatting
+            let text = codeElement.textContent || codeElement.innerText;
+            
+            // Ensure proper line breaks and indentation are preserved
+            text = text.replace(/\u00A0/g, ' '); // Replace non-breaking spaces with regular spaces
+            text = text.trim(); // Remove leading/trailing whitespace
             
             navigator.clipboard.writeText(text).then(() => {
-                showStatus('Code copied to clipboard!', 'success');
+                showStatus('Code copied to clipboard with formatting!', 'success');
             }).catch(() => {
                 // Fallback for older browsers
                 const textArea = document.createElement('textarea');
                 textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
                 document.body.appendChild(textArea);
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                showStatus('Code copied to clipboard!', 'success');
+                showStatus('Code copied to clipboard with formatting!', 'success');
             });
         }
 
         function insertCode(blockId) {
             const codeElement = document.getElementById(blockId);
-            const code = codeElement.textContent;
+            // Get the raw text content and preserve formatting
+            let code = codeElement.textContent || codeElement.innerText;
+            
+            // Ensure proper line breaks and indentation are preserved
+            code = code.replace(/\u00A0/g, ' '); // Replace non-breaking spaces with regular spaces
+            code = code.trim(); // Remove leading/trailing whitespace
+            
+            console.log('Attempting to insert code:', code);
             
             fetch('/insert_code', {
                 method: 'POST',
@@ -563,16 +581,37 @@
                 },
                 body: JSON.stringify({ code: code })
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Insert response status:', response.status);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('RStudio connection not available. Please ensure RStudio is running and the plumber server is active.');
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Insert response data:', data);
                 if (data.success) {
                     showStatus(`Code inserted into: ${data.document}`, 'success');
                 } else {
-                    showStatus('Failed to insert code: ' + data.message, 'error');
+                    showStatus('Failed to insert code: ' + (data.message || 'Unknown error'), 'error');
                 }
             })
             .catch(error => {
-                showStatus('Error inserting code: ' + error.message, 'error');
+                console.error('Insert error:', error);
+                if (error.message.includes('RStudio connection')) {
+                    showStatus('RStudio not connected. Code copied to clipboard instead.', 'warning');
+                    // Fallback: copy to clipboard
+                    navigator.clipboard.writeText(code).then(() => {
+                        showStatus('Code copied to clipboard (RStudio not available)', 'info');
+                    }).catch(() => {
+                        showStatus('Code copied to clipboard (RStudio not available)', 'info');
+                    });
+                } else {
+                    showStatus('Error inserting code: ' + error.message, 'error');
+                }
             });
         }
 
@@ -603,6 +642,7 @@
                     document.getElementById('access-section').classList.add('hidden');
                     document.getElementById('main-interface').classList.remove('hidden');
                     loadStats();
+                    checkRStudioConnection();
                 } else {
                     showStatus('✗ Invalid access code', 'error');
                 }
@@ -746,6 +786,27 @@
             promptInput.style.height = 'auto';
             
             showStatus('Started new conversation', 'success');
+        }
+
+        async function checkRStudioConnection() {
+            const statusDiv = document.getElementById('rstudio-status');
+            statusDiv.classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/health');
+                if (response.ok) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = '✓ RStudio connected';
+                    setTimeout(() => {
+                        statusDiv.classList.add('hidden');
+                    }, 3000);
+                } else {
+                    throw new Error('Health check failed');
+                }
+            } catch (error) {
+                statusDiv.className = 'status warning';
+                statusDiv.textContent = '⚠ RStudio not connected - Insert button will copy to clipboard';
+            }
         }
 
         function showStatus(message, type) {
