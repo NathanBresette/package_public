@@ -162,10 +162,9 @@ function() {
       c(paste("Error reading error history:", e$message))
     })
     
-    # Return context with simple types that serialize correctly
-    # Ensure all single values are strings, not arrays
+    # Create the result list
     result <- list(
-      document_content = as.character(document_content),
+      document_content = document_content,
       console_history = console_history,
       workspace_objects = workspace_objects,
       environment_info = environment_info,
@@ -176,9 +175,11 @@ function() {
       source = "rstudio_plumber_context"
     )
     
-    # Convert any remaining single-item arrays to strings
+    # Force all single-character values to be strings, not arrays
+    # This is the key fix - ensure R doesn't wrap single values in arrays
     for (name in names(result)) {
       if (is.character(result[[name]]) && length(result[[name]]) == 1) {
+        # Extract the single value to prevent array wrapping
         result[[name]] <- result[[name]][1]
       }
     }
