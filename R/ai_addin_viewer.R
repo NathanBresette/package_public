@@ -103,28 +103,18 @@ ai_addin_viewer <- function(port = NULL) {
   
   # 3. Test connection to Render backend
   
-  # 4. Open the HTML UI in browser
-  cat("Opening AI Assistant in browser...\n")
+  # 4. Open the HTML UI in RStudio Viewer
+  cat("Opening AI Assistant in RStudio Viewer...\n")
   
-  # Find the HTML file in the package
-  html_file <- file.path(system.file("public", package = "rstudioai"), "index.html")
+  # Open in RStudio Viewer using the local HTTP server
+  viewer_url <- sprintf("http://127.0.0.1:%d/", port)
+  cat("Opening URL:", viewer_url, "\n")
   
-  if (file.exists(html_file)) {
-    # Convert file path to URL with port parameter
-    file_url <- paste0("file://", normalizePath(html_file), "?port=", port)
-    cat("Opening URL:", file_url, "\n")
-    
-    # Open in RStudio Viewer only, using the local HTTP server
-    viewer_url <- sprintf("http://127.0.0.1:%d/", port)
-    if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-      rstudioapi::viewer(viewer_url)
-      cat("AI Assistant launched successfully in the RStudio Viewer pane!\n")
-    } else {
-      stop("RStudio Viewer is not available. Please run this addin inside RStudio.")
-    }
+  if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+    rstudioapi::viewer(viewer_url)
+    cat("AI Assistant launched successfully in the RStudio Viewer pane!\n")
   } else {
-    cat("HTML file not found:", html_file, "\n")
-    return(invisible(FALSE))
+    stop("RStudio Viewer is not available. Please run this addin inside RStudio.")
   }
   
   invisible(TRUE)
