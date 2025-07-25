@@ -408,14 +408,19 @@
         }
 
         function extractCodeFromResponse(responseText) {
-            // Look for code blocks marked with ```r, ```, or ```{r}
-            const codeBlockRegex = /```(?:r|{r})?\s*\n([\s\S]*?)```/g;
+            console.log('Extracting code from:', responseText);
+            
+            // Look for code blocks marked with ```r, ```R, ```, or ```{r}
+            const codeBlockRegex = /```(?:r|R|{r})?\s*\n([\s\S]*?)```/g;
             const codeBlocks = [];
             let match;
             
             while ((match = codeBlockRegex.exec(responseText)) !== null) {
+                console.log('Found code block:', match[1]);
                 codeBlocks.push(match[1].trim());
             }
+            
+            console.log('Extracted code blocks:', codeBlocks);
             
             // If no code blocks found, look for lines that look like R code
             if (codeBlocks.length === 0) {
@@ -446,7 +451,9 @@
                 }
             }
             
-            return codeBlocks.length > 0 ? codeBlocks.join('\n\n') : responseText;
+            const result = codeBlocks.length > 0 ? codeBlocks.join('\n\n') : responseText;
+            console.log('Final extracted code:', result);
+            return result;
         }
 
         function insertIntoEditor() {
