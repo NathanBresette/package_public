@@ -38,39 +38,32 @@ function() {
       c("Console History: Error reading")
     })
     
-    # Get workspace objects as a simple dictionary
+    # Get workspace objects as a named dictionary
     workspace_objects <- tryCatch({
       objects <- ls(envir = .GlobalEnv)
       if (length(objects) > 0) {
         obj_dict <- list()
-        for (obj in objects) {
+        for (obj_name in objects) {
           tryCatch({
-            val <- get(obj, envir = .GlobalEnv)
+            obj <- get(obj_name, envir = .GlobalEnv)
             
-            # Create simple object info
+            # Create object info as a dictionary
             obj_info <- list(
-              type = if ("data.frame" %in% class(val)) "dataframe" else if (is.vector(val)) "vector" else if (is.list(val)) "list" else if (is.function(val)) "function" else "other",
-              size = if (is.data.frame(val)) paste(nrow(val), "rows,", ncol(val), "cols") else as.character(length(val)),
-              class = paste(class(val), collapse = ", ")
+              class = paste(class(obj), collapse = ", "),
+              rows = if (is.data.frame(obj)) nrow(obj) else length(obj),
+              columns = if (is.data.frame(obj)) ncol(obj) else NULL,
+              preview = paste(utils::capture.output(print(utils::head(obj, 3))), collapse = "\n")
             )
             
-            # Add simple type-specific details as strings
-            if (is.data.frame(val)) {
-              obj_info$columns <- paste(colnames(val), collapse = ", ")
-              obj_info$data_types <- paste(sapply(val, function(x) paste(class(x), collapse = ", ")), collapse = ", ")
-            } else if (is.vector(val) && length(val) > 0) {
-              obj_info$vector_type <- class(val)[1]
-              obj_info$sample_values <- paste(as.character(head(val, 5)), collapse = ", ")
-            } else if (is.list(val)) {
-              obj_info$length <- as.character(length(val))
-              obj_info$names <- paste(names(val), collapse = ", ")
-            } else if (is.function(val)) {
-              obj_info$arguments <- paste(names(formals(val)), collapse = ", ")
-            }
-            
-            obj_dict[[obj]] <- obj_info
+            # Add the object to the dictionary with its name as the key
+            obj_dict[[obj_name]] <- obj_info
           }, error = function(e) {
-            obj_dict[[obj]] <<- list(type = "error", size = "unknown", class = "error", error = e$message)
+            obj_dict[[obj_name]] <<- list(
+              class = "error", 
+              rows = NULL, 
+              columns = NULL, 
+              preview = paste("Error reading object:", e$message)
+            )
           })
         }
         obj_dict
