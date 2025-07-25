@@ -163,7 +163,8 @@ function() {
     })
     
     # Return context with simple types that serialize correctly
-    list(
+    # Ensure all single values are strings, not arrays
+    result <- list(
       document_content = as.character(document_content),
       console_history = console_history,
       workspace_objects = workspace_objects,
@@ -174,6 +175,15 @@ function() {
       timestamp = as.character(Sys.time()),
       source = "rstudio_plumber_context"
     )
+    
+    # Convert any remaining single-item arrays to strings
+    for (name in names(result)) {
+      if (is.character(result[[name]]) && length(result[[name]]) == 1) {
+        result[[name]] <- result[[name]][1]
+      }
+    }
+    
+    result
   }, error = function(e) {
     list(
       error = paste("Error capturing context:", e$message),
