@@ -424,6 +424,7 @@
                 </div>
                 <button class="btn" onclick="refreshStats()">Refresh Stats</button>
                 <button class="btn" onclick="clearContext()">Clear Context</button>
+                <button class="btn" onclick="startNewConversation()">New Conversation</button>
             </div>
 
             <!-- Chat Container -->
@@ -455,6 +456,7 @@
         let accessCode = '';
         let isAccessValid = false;
         let messages = [];
+        let currentConversationId = null;
 
         function autoResize(textarea) {
             textarea.style.height = 'auto';
@@ -656,7 +658,9 @@
                         access_code: accessCode,
                         prompt: prompt,
                         context_data: contextData,
-                        context_type: 'rstudio'
+                        context_type: 'rstudio',
+                        conversation_id: currentConversationId,
+                        new_conversation: !currentConversationId
                     })
                 });
 
@@ -666,6 +670,11 @@
                 typingMessage.remove();
 
                 if (response.ok) {
+                    // Store conversation ID for future messages
+                    if (data.conversation_id) {
+                        currentConversationId = data.conversation_id;
+                    }
+                    
                     // Add AI response
                     addMessage(data.response, false);
                     loadStats(); // Refresh stats after successful request
@@ -721,6 +730,22 @@
             } catch (error) {
                 showStatus('Error clearing context: ' + error.message, 'error');
             }
+        }
+
+        function startNewConversation() {
+            // Clear current conversation
+            currentConversationId = null;
+            
+            // Clear messages from UI
+            const messagesContainer = document.getElementById('messages-container');
+            messagesContainer.innerHTML = '';
+            
+            // Clear input
+            const promptInput = document.getElementById('prompt');
+            promptInput.value = '';
+            promptInput.style.height = 'auto';
+            
+            showStatus('Started new conversation', 'success');
         }
 
         function showStatus(message, type) {
