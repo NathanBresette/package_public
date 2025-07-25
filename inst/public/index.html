@@ -483,6 +483,8 @@
         }
 
         function addMessage(content, isUser = false, isTyping = false, isStreaming = false) {
+            console.log('addMessage called with:', { content: content?.substring(0, 50), isUser, isTyping, isStreaming });
+            
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
             if (isStreaming) {
@@ -512,6 +514,11 @@
             messageDiv.appendChild(messageContent);
             
             const container = document.getElementById('messages-container');
+            console.log('Messages container found:', !!container);
+            if (!container) {
+                console.error('Messages container not found!');
+                return messageDiv;
+            }
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
             
@@ -701,9 +708,14 @@
         }
 
         async function sendToAI() {
+            console.log('sendToAI function called');
+            
             const promptInput = document.getElementById('prompt');
             const sendBtn = document.getElementById('send-btn');
             const prompt = promptInput.value.trim();
+            
+            console.log('Prompt:', prompt);
+            console.log('isAccessValid:', isAccessValid);
             
             if (!prompt) {
                 showStatus('Please enter a prompt', 'error');
@@ -715,6 +727,7 @@
                 return;
             }
 
+            console.log('Adding user message...');
             // Add user message
             addMessage(prompt, true);
             
