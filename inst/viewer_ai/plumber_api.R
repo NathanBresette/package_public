@@ -13,24 +13,22 @@ function() {
 #* @get /context
 function() {
   tryCatch({
-    # Get document context if RStudio API is available
+    # Get document content as a simple string
     document_content <- ""
-    selection <- ""
     if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
       tryCatch({
         ctx <- rstudioapi::getActiveDocumentContext()
         document_content <- paste(ctx$contents, collapse = "\n")
-        selection <- if (length(ctx$selection) > 0) ctx$selection[[1]]$text else ""
       }, error = function(e) {
         document_content <- paste("Error getting document context:", e$message)
       })
     }
     
-    # Get console history as a list
+    # Get console history as a simple list of strings
     console_history <- tryCatch({
       history_file <- Sys.getenv("R_HISTFILE", file.path(Sys.getenv("HOME"), ".Rhistory"))
       if (file.exists(history_file)) {
-        readLines(history_file, n = 50)
+        as.list(readLines(history_file, n = 50))
       } else {
         list("Console History: Not available")
       }
@@ -38,7 +36,7 @@ function() {
       list("Console History: Error reading")
     })
     
-    # Get workspace objects as a dictionary with detailed info
+    # Get workspace objects as a simple dictionary
     workspace_objects <- tryCatch({
       objects <- ls(envir = .GlobalEnv)
       if (length(objects) > 0) {
@@ -46,27 +44,26 @@ function() {
         for (obj in objects) {
           tryCatch({
             val <- get(obj, envir = .GlobalEnv)
-            class_info <- paste(class(val), collapse = ", ")
             
-            # Create detailed object info
+            # Create simple object info
             obj_info <- list(
               type = if ("data.frame" %in% class(val)) "dataframe" else if (is.vector(val)) "vector" else if (is.list(val)) "list" else if (is.function(val)) "function" else "other",
-              size = if (is.data.frame(val)) paste(nrow(val), "rows,", ncol(val), "cols") else length(val),
-              class = class_info
+              size = if (is.data.frame(val)) paste(nrow(val), "rows,", ncol(val), "cols") else as.character(length(val)),
+              class = paste(class(val), collapse = ", ")
             )
             
-            # Add type-specific details
+            # Add simple type-specific details
             if (is.data.frame(val)) {
-              obj_info$columns <- colnames(val)
-              obj_info$data_types <- sapply(val, class)
+              obj_info$columns <- as.list(colnames(val))
+              obj_info$data_types <- as.list(sapply(val, function(x) paste(class(x), collapse = ", ")))
             } else if (is.vector(val) && length(val) > 0) {
               obj_info$vector_type <- class(val)[1]
-              obj_info$sample_values <- as.list(head(val, 5))
+              obj_info$sample_values <- as.list(as.character(head(val, 5)))
             } else if (is.list(val)) {
-              obj_info$length <- length(val)
-              obj_info$names <- names(val)
+              obj_info$length <- as.character(length(val))
+              obj_info$names <- as.list(names(val))
             } else if (is.function(val)) {
-              obj_info$arguments <- names(formals(val))
+              obj_info$arguments <- as.list(names(formals(val)))
             }
             
             obj_dict[[obj]] <- obj_info
@@ -82,9 +79,9 @@ function() {
       list(error = paste("Error reading workspace objects:", e$message))
     })
     
-    # Get environment information as a dictionary
+    # Get environment information as a simple dictionary
     environment_info <- tryCatch({
-      # Get loaded packages
+      # Get loaded packages as a simple list
       loaded_packages <- tryCatch({
         pkgs <- names(sessionInfo()$otherPkgs)
         if (length(pkgs) > 0) {
@@ -103,16 +100,16 @@ function() {
       })
       
       list(
-        r_version = R.version.string,
-        platform = R.version$platform,
-        working_directory = getwd(),
+        r_version = as.character(R.version.string),
+        platform = as.character(R.version$platform),
+        working_directory = as.character(getwd()),
         packages = loaded_packages
       )
     }, error = function(e) {
       list(error = paste("Error reading environment info:", e$message))
     })
     
-    # Get custom functions as a list
+    # Get custom functions as a simple list
     custom_functions <- tryCatch({
       objects <- ls(envir = .GlobalEnv)
       funcs <- objects[sapply(objects, function(obj) {
@@ -126,7 +123,7 @@ function() {
       list(error = paste("Error reading functions:", e$message))
     })
     
-    # Get plot history as a list
+    # Get plot history as a simple list
     plot_history <- tryCatch({
       plot_objects <- ls(envir = .GlobalEnv)[sapply(ls(envir = .GlobalEnv), function(obj) {
         tryCatch({
@@ -139,7 +136,7 @@ function() {
       list(error = paste("Error reading plot history:", e$message))
     })
     
-    # Get error history as a list
+    # Get error history as a simple list
     error_history <- tryCatch({
       errors <- list()
       if (exists(".Last.error", envir = .GlobalEnv)) {
@@ -163,21 +160,20 @@ function() {
     
     # Return context in the format expected by the backend
     list(
-      document_content = document_content,
-      selection = selection,
+      document_content = as.character(document_content),
       console_history = console_history,
       workspace_objects = workspace_objects,
       environment_info = environment_info,
       custom_functions = custom_functions,
       plot_history = plot_history,
       error_history = error_history,
-      timestamp = Sys.time(),
+      timestamp = as.character(Sys.time()),
       source = "rstudio_plumber_context"
     )
   }, error = function(e) {
     list(
       error = paste("Error capturing context:", e$message),
-      timestamp = Sys.time(),
+      timestamp = as.character(Sys.time()),
       source = "rstudio_plumber_context"
     )
   })
