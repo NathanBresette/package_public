@@ -481,7 +481,7 @@
                 .then(data => {
                     console.log('Insert response data:', data);
                     if (data.success) {
-                        showStatus('Code extracted and inserted into RStudio editor!', 'success');
+                        showStatus(`Code inserted into: ${data.document}`, 'success');
                     } else {
                         showStatus('Failed to insert code: ' + data.message, 'error');
                     }

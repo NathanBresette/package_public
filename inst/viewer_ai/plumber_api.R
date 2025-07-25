@@ -211,10 +211,27 @@ function() {
 function(req) {
   code <- req$body$code
   tryCatch({
+    # Get current document context
+    ctx <- rstudioapi::getActiveDocumentContext()
+    active_doc <- ctx$path
+    active_doc_name <- basename(active_doc)
+    
+    # Insert the code
     rstudioapi::insertText(code)
-    list(success = TRUE, message = "Code inserted successfully")
+    
+    list(
+      success = TRUE, 
+      message = paste("Code inserted successfully into:", active_doc_name),
+      document = active_doc_name,
+      path = active_doc
+    )
   }, error = function(e) {
-    list(success = FALSE, message = paste("Error inserting code:", e$message))
+    list(
+      success = FALSE, 
+      message = paste("Error inserting code:", e$message),
+      document = "unknown",
+      path = "unknown"
+    )
   })
 }
 
