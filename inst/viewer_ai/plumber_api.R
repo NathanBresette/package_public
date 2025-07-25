@@ -1,15 +1,17 @@
 #* @plumber
 function(pr) {
+  # Mount static files from the public directory
+  static_dir <- system.file("public", package = "rstudioai")
+  pr$mount("/static", static_dir)
+  
   # Root endpoint to serve index.html
   pr$handle("GET", "/", function(req, res) {
     tryCatch({
-      static_dir <- system.file("public", package = "rstudioai")
       html_file <- file.path(static_dir, "index.html")
       if (file.exists(html_file)) {
-        html_content <- paste(readLines(html_file), collapse = "\n")
-        # Set content type and return HTML directly
         res$setHeader("Content-Type", "text/html")
         res$setHeader("Cache-Control", "no-cache")
+        html_content <- paste(readLines(html_file), collapse = "\n")
         return(html_content)
       } else {
         res$status <- 404
