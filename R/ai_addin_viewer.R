@@ -61,11 +61,6 @@ ai_addin_viewer <- function(port = NULL) {
   }
   
   # 3. Test connection to Render backend
-  cat("Testing connection to Render backend...\n")
-  if (!test_backend_connection()) {
-    cat("Cannot connect to Render backend. Please check your internet connection.\n")
-    return(invisible(FALSE))
-  }
   
   # 4. Open the HTML UI in browser
   cat("Opening AI Assistant in browser...\n")
