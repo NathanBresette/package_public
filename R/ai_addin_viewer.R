@@ -43,17 +43,60 @@ ai_addin_viewer <- function(port = NULL) {
     return(invisible(FALSE))
   }
   
-  # Start plumber server in background
+  # Capture workspace objects in main R session
+  cat("Capturing workspace objects...\n")
+  workspace_objects <- tryCatch({
+    objects <- ls(envir = .GlobalEnv)
+    if (length(objects) > 0) {
+      obj_dict <- list()
+      for (obj_name in objects) {
+        tryCatch({
+          obj <- get(obj_name, envir = .GlobalEnv)
+          
+          # Create object info as a dictionary
+          obj_info <- list(
+            class = paste(class(obj), collapse = ", "),
+            rows = if (is.data.frame(obj)) nrow(obj) else length(obj),
+            columns = if (is.data.frame(obj)) ncol(obj) else NULL,
+            preview = paste(utils::capture.output(print(utils::head(obj, 3))), collapse = "\n")
+          )
+          
+          # Add the object to the dictionary with its name as the key
+          obj_dict[[obj_name]] <- obj_info
+        }, error = function(e) {
+          obj_dict[[obj_name]] <<- list(
+            class = "error", 
+            rows = NULL, 
+            columns = NULL, 
+            preview = paste("Error reading object:", e$message)
+          )
+        })
+      }
+      obj_dict
+    } else {
+      list()
+    }
+  }, error = function(e) {
+    cat("Error capturing workspace objects:", e$message, "\n")
+    list()
+  })
+  
+  cat("Found", length(workspace_objects), "workspace objects\n")
+  
+  # Start plumber server in background with workspace data
   plumber_api_file <- file.path(system.file("viewer_ai", package = "rstudioai"), "plumber_api.R")
   
   cat("Plumber API file path is:", plumber_api_file, "\n")
   cat("File exists:", file.exists(plumber_api_file), "\n")
   
   if (file.exists(plumber_api_file)) {
-    plumber_process <- callr::r_bg(function(api_file, server_port) {
+    plumber_process <- callr::r_bg(function(api_file, server_port, workspace_data) {
+      # Store workspace data in a global variable that the plumber API can access
+      .GlobalEnv$captured_workspace_objects <- workspace_data
+      
       pr <- plumber::plumb(api_file)
       pr$run(host = "127.0.0.1", port = server_port)
-    }, args = list(api_file = plumber_api_file, server_port = port))
+    }, args = list(api_file = plumber_api_file, server_port = port, workspace_data = workspace_objects))
 
     cat("plumber_process class:", class(plumber_process), "\n")
 

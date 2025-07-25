@@ -51,37 +51,42 @@ function() {
       character(0)  # Return empty vector on error
     })
     
-    # Get workspace objects as a named dictionary
+    # Get workspace objects from captured data (passed from main R session)
     workspace_objects <- tryCatch({
-      objects <- ls(envir = .GlobalEnv)
-      if (length(objects) > 0) {
-        obj_dict <- list()
-        for (obj_name in objects) {
-          tryCatch({
-            obj <- get(obj_name, envir = .GlobalEnv)
-            
-            # Create object info as a dictionary
-            obj_info <- list(
-              class = paste(class(obj), collapse = ", "),
-              rows = if (is.data.frame(obj)) nrow(obj) else length(obj),
-              columns = if (is.data.frame(obj)) ncol(obj) else NULL,
-              preview = paste(utils::capture.output(print(utils::head(obj, 3))), collapse = "\n")
-            )
-            
-            # Add the object to the dictionary with its name as the key
-            obj_dict[[obj_name]] <- obj_info
-          }, error = function(e) {
-            obj_dict[[obj_name]] <<- list(
-              class = "error", 
-              rows = NULL, 
-              columns = NULL, 
-              preview = paste("Error reading object:", e$message)
-            )
-          })
-        }
-        obj_dict
+      if (exists("captured_workspace_objects", envir = .GlobalEnv)) {
+        captured_workspace_objects
       } else {
-        list()  # Return empty list instead of error
+        # Fallback: try to get objects from current environment
+        objects <- ls(envir = .GlobalEnv)
+        if (length(objects) > 0) {
+          obj_dict <- list()
+          for (obj_name in objects) {
+            tryCatch({
+              obj <- get(obj_name, envir = .GlobalEnv)
+              
+              # Create object info as a dictionary
+              obj_info <- list(
+                class = paste(class(obj), collapse = ", "),
+                rows = if (is.data.frame(obj)) nrow(obj) else length(obj),
+                columns = if (is.data.frame(obj)) ncol(obj) else NULL,
+                preview = paste(utils::capture.output(print(utils::head(obj, 3))), collapse = "\n")
+              )
+              
+              # Add the object to the dictionary with its name as the key
+              obj_dict[[obj_name]] <- obj_info
+            }, error = function(e) {
+              obj_dict[[obj_name]] <<- list(
+                class = "error", 
+                rows = NULL, 
+                columns = NULL, 
+                preview = paste("Error reading object:", e$message)
+              )
+            })
+          }
+          obj_dict
+        } else {
+          list()  # Return empty list instead of error
+        }
       }
     }, error = function(e) {
       list()  # Return empty list on error
