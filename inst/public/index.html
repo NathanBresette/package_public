@@ -13,42 +13,241 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            background: #f7f7f8;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         .container {
-            max-width: 95vw;
-            width: 95vw;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 100%;
             margin: 0 auto;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
         }
 
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
+            padding: 20px 30px;
             text-align: center;
+            flex-shrink: 0;
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 1.8em;
+            margin-bottom: 5px;
         }
 
         .header p {
             opacity: 0.9;
-            font-size: 1.1em;
+            font-size: 0.9em;
         }
 
-        .content {
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .access-section {
             padding: 30px;
+            text-align: center;
+            background: white;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f7f7f8;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.assistant {
+            justify-content: flex-start;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: #667eea;
+            color: white;
+        }
+
+        .message.assistant .message-avatar {
+            background: #10a37f;
+            color: white;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e1e5e9;
+            border-bottom-left-radius: 4px;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 8px;
+            margin: 12px 0;
+            overflow: hidden;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .code-header {
+            background: #2d2d2d;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #404040;
+        }
+
+        .code-language {
+            color: #d4d4d4;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .code-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .code-btn {
+            background: #404040;
+            color: #d4d4d4;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .code-btn:hover {
+            background: #505050;
+        }
+
+        .code-btn.success {
+            background: #28a745;
+            color: white;
+        }
+
+        .code-btn.success:hover {
+            background: #218838;
+        }
+
+        .code-content {
+            padding: 12px;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e1e5e9;
+            flex-shrink: 0;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .input-field {
+            flex: 1;
+            position: relative;
+        }
+
+        textarea {
             width: 100%;
-            box-sizing: border-box;
+            padding: 12px 16px;
+            border: 1px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: none;
+            min-height: 44px;
+            max-height: 200px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
         }
 
         .section {
@@ -57,12 +256,6 @@
             border: 1px solid #e1e5e9;
             border-radius: 8px;
             background: #f8f9fa;
-        }
-
-        .section h3 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 1.3em;
         }
 
         .form-group {
@@ -76,7 +269,7 @@
             color: #333;
         }
 
-        input, textarea {
+        input {
             width: 100%;
             padding: 12px;
             border: 2px solid #e1e5e9;
@@ -85,14 +278,9 @@
             transition: border-color 0.3s;
         }
 
-        input:focus, textarea:focus {
+        input:focus {
             outline: none;
             border-color: #667eea;
-        }
-
-        textarea {
-            min-height: 120px;
-            resize: vertical;
         }
 
         .btn {
@@ -111,19 +299,6 @@
 
         .btn:hover {
             transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-        }
-
-        .btn-success {
-            background: #28a745;
-        }
-
-        .btn-warning {
-            background: #ffc107;
-            color: #333;
         }
 
         .status {
@@ -149,31 +324,6 @@
             background: #d1ecf1;
             color: #0c5460;
             border: 1px solid #bee5eb;
-        }
-
-        .response {
-            background: #f8f9fa;
-            border: 1px solid #e1e5e9;
-            border-radius: 6px;
-            padding: 20px;
-            margin-top: 20px;
-            white-space: normal;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            word-break: break-word;
-            font-family: 'Courier New', monospace;
-            max-height: 400px;
-            overflow-y: auto;
-            overflow-x: hidden;
-            width: 100%;
-            box-sizing: border-box;
-            line-height: 1.4;
-            min-width: 0;
-        }
-        
-        .response br {
-            display: block;
-            margin: 2px 0;
         }
 
         .hidden {
@@ -214,6 +364,28 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #999;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -223,9 +395,9 @@
             <p>AI-powered coding assistant for R programmers</p>
         </div>
 
-        <div class="content">
-            <!-- Access Code Section -->
-            <div id="access-section" class="section">
+        <!-- Access Code Section -->
+        <div id="access-section" class="access-section">
+            <div class="section">
                 <h3>🔒 Enter Access Code</h3>
                 <div class="form-group">
                     <label for="access-code">Access Code:</label>
@@ -234,13 +406,12 @@
                 <button class="btn" onclick="validateAccess()">Validate Access</button>
                 <div id="access-status"></div>
             </div>
+        </div>
 
-            <!-- Main Interface -->
-            <div id="main-interface" class="section hidden">
-                <h3>🤖 AI Coding Assistant</h3>
-                <p>You now have access to AI-powered coding assistance!</p>
-
-                <!-- Usage Stats -->
+        <!-- Main Chat Interface -->
+        <div id="main-interface" class="main-content hidden">
+            <!-- Stats Section -->
+            <div class="section" style="margin: 20px; margin-bottom: 0;">
                 <div class="stats">
                     <div class="stat-card">
                         <h4>Today's Requests</h4>
@@ -251,21 +422,31 @@
                         <div id="monthly-budget">-</div>
                     </div>
                 </div>
+                <button class="btn" onclick="refreshStats()">Refresh Stats</button>
+                <button class="btn" onclick="clearContext()">Clear Context</button>
+            </div>
 
-                <button class="btn btn-secondary" onclick="refreshStats()">Refresh Stats</button>
-                <button class="btn btn-warning" onclick="clearContext()">Clear Context</button>
-
-                <hr style="margin: 20px 0; border: none; border-top: 1px solid #e1e5e9;">
-
-                <!-- Chat Interface -->
-                <div class="form-group">
-                    <label for="prompt">Ask AI:</label>
-                    <textarea id="prompt" placeholder="Describe what you want to do in R..."></textarea>
+            <!-- Chat Container -->
+            <div class="chat-container">
+                <div id="messages-container" class="messages-container">
+                    <!-- Messages will be added here -->
                 </div>
-                <button class="btn btn-success" onclick="sendToAI()">Send to AI</button>
-                <button class="btn btn-warning" onclick="insertIntoEditor()">Insert into Editor</button>
 
-                <div id="response" class="response hidden"></div>
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <div class="input-field">
+                            <textarea 
+                                id="prompt" 
+                                placeholder="Ask me anything about R programming..."
+                                rows="1"
+                                oninput="autoResize(this)"
+                            ></textarea>
+                        </div>
+                        <button id="send-btn" class="send-btn" onclick="sendToAI()">
+                            Send
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -273,6 +454,125 @@
     <script>
         let accessCode = '';
         let isAccessValid = false;
+        let messages = [];
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+        }
+
+        function addMessage(content, isUser = false, isTyping = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = isUser ? '👤' : '🤖';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            if (isTyping) {
+                messageContent.innerHTML = `
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                `;
+            } else {
+                messageContent.innerHTML = formatMessage(content);
+            }
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            
+            const container = document.getElementById('messages-container');
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+            
+            return messageDiv;
+        }
+
+        function formatMessage(content) {
+            // Extract and format code blocks
+            let formatted = content.replace(/```(?:r|R|{r})?\s*\n([\s\S]*?)```/g, (match, code) => {
+                return createCodeBlock(code, 'r');
+            });
+            
+            // Handle inline code
+            formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: #f1f1f1; padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>');
+            
+            // Convert line breaks to <br>
+            formatted = formatted.replace(/\n/g, '<br>');
+            
+            return formatted;
+        }
+
+        function createCodeBlock(code, language = 'r') {
+            const blockId = 'code-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            
+            return `
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">${language.toUpperCase()}</span>
+                        <div class="code-actions">
+                            <button class="code-btn" onclick="copyCode('${blockId}')">Copy</button>
+                            <button class="code-btn success" onclick="insertCode('${blockId}')">Insert</button>
+                        </div>
+                    </div>
+                    <div id="${blockId}" class="code-content">${escapeHtml(code)}</div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyCode(blockId) {
+            const codeElement = document.getElementById(blockId);
+            const text = codeElement.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showStatus('Code copied to clipboard!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showStatus('Code copied to clipboard!', 'success');
+            });
+        }
+
+        function insertCode(blockId) {
+            const codeElement = document.getElementById(blockId);
+            const code = codeElement.textContent;
+            
+            fetch('/insert_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code: code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus(`Code inserted into: ${data.document}`, 'success');
+                } else {
+                    showStatus('Failed to insert code: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showStatus('Error inserting code: ' + error.message, 'error');
+            });
+        }
 
         async function validateAccess() {
             const code = document.getElementById('access-code').value.trim();
@@ -310,7 +610,10 @@
         }
 
         async function sendToAI() {
-            const prompt = document.getElementById('prompt').value.trim();
+            const promptInput = document.getElementById('prompt');
+            const sendBtn = document.getElementById('send-btn');
+            const prompt = promptInput.value.trim();
+            
             if (!prompt) {
                 showStatus('Please enter a prompt', 'error');
                 return;
@@ -321,9 +624,16 @@
                 return;
             }
 
-            const responseDiv = document.getElementById('response');
-            responseDiv.innerHTML = '<div class="loading"></div> Processing...';
-            responseDiv.classList.remove('hidden');
+            // Add user message
+            addMessage(prompt, true);
+            
+            // Clear input and disable send button
+            promptInput.value = '';
+            promptInput.style.height = 'auto';
+            sendBtn.disabled = true;
+            
+            // Add typing indicator
+            const typingMessage = addMessage('', false, true);
 
             try {
                 // First, fetch RStudio context from local plumber server
@@ -352,18 +662,24 @@
 
                 const data = await response.json();
 
+                // Remove typing indicator
+                typingMessage.remove();
+
                 if (response.ok) {
-                    // Format the response text with proper line breaks and wrapping
-                    const formattedResponse = data.response
-                        .replace(/\n/g, '<br>')
-                        .replace(/\s{2,}/g, '&nbsp;&nbsp;');
-                    responseDiv.innerHTML = formattedResponse;
+                    // Add AI response
+                    addMessage(data.response, false);
                     loadStats(); // Refresh stats after successful request
                 } else {
-                    responseDiv.innerHTML = 'Error: ' + (data.detail || data.error || 'Unknown error');
+                    addMessage('Error: ' + (data.detail || data.error || 'Unknown error'), false);
                 }
             } catch (error) {
-                responseDiv.innerHTML = 'Error: ' + error.message;
+                // Remove typing indicator
+                typingMessage.remove();
+                addMessage('Error: ' + error.message, false);
+            } finally {
+                // Re-enable send button
+                sendBtn.disabled = false;
+                promptInput.focus();
             }
         }
 
@@ -407,107 +723,6 @@
             }
         }
 
-        function extractCodeFromResponse(responseText) {
-            console.log('Extracting code from:', responseText);
-            
-            // Try multiple regex patterns to catch different code block formats
-            const patterns = [
-                /```(?:r|R|{r})?\s*\n([\s\S]*?)```/g,
-                /```\s*\n([\s\S]*?)```/g,
-                /`([^`]+)`/g  // Inline code blocks
-            ];
-            
-            const codeBlocks = [];
-            
-            for (let pattern of patterns) {
-                console.log('Trying pattern:', pattern);
-                let match;
-                while ((match = pattern.exec(responseText)) !== null) {
-                    console.log('Found match with pattern:', match[0].substring(0, 50) + '...');
-                    const code = match[1] || match[0];
-                    if (code && code.trim().length > 0) {
-                        codeBlocks.push(code.trim());
-                    }
-                }
-            }
-            
-            console.log('Extracted code blocks:', codeBlocks);
-            
-            // If no code blocks found, look for lines that look like R code
-            if (codeBlocks.length === 0) {
-                console.log('No code blocks found, looking for R code lines...');
-                const lines = responseText.split('\n');
-                const codeLines = lines.filter(line => {
-                    const trimmed = line.trim();
-                    // Look for lines that look like R code (functions, assignments, etc.)
-                    return trimmed && (
-                        trimmed.startsWith('function(') ||
-                        trimmed.includes('<-') ||
-                        trimmed.includes('=') ||
-                        trimmed.startsWith('if(') ||
-                        trimmed.startsWith('for(') ||
-                        trimmed.startsWith('while(') ||
-                        trimmed.startsWith('library(') ||
-                        trimmed.startsWith('require(') ||
-                        trimmed.startsWith('data(') ||
-                        trimmed.startsWith('plot(') ||
-                        trimmed.startsWith('ggplot(') ||
-                        trimmed.startsWith('print(') ||
-                        trimmed.startsWith('cat(') ||
-                        trimmed.startsWith('return(') ||
-                        trimmed.startsWith('#'))
-                });
-                
-                if (codeLines.length > 0) {
-                    codeBlocks.push(codeLines.join('\n'));
-                }
-            }
-            
-            const result = codeBlocks.length > 0 ? codeBlocks.join('\n\n') : responseText;
-            console.log('Final extracted code:', result);
-            return result;
-        }
-
-        function insertIntoEditor() {
-            console.log('Insert into Editor clicked');
-            const response = document.getElementById('response').textContent;
-            console.log('Response text:', response);
-            
-            if (response && response !== 'Processing...') {
-                // Extract just the code from the response
-                const codeToInsert = extractCodeFromResponse(response);
-                console.log('Code to insert:', codeToInsert);
-                
-                // Send the extracted code to the local plumber server for insertion
-                fetch('/insert_code', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ code: codeToInsert })
-                })
-                .then(response => {
-                    console.log('Insert response status:', response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Insert response data:', data);
-                    if (data.success) {
-                        showStatus(`Code inserted into: ${data.document}`, 'success');
-                    } else {
-                        showStatus('Failed to insert code: ' + data.message, 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Insert error:', error);
-                    showStatus('Error inserting code: ' + error.message, 'error');
-                });
-            } else {
-                console.log('No response to insert');
-                showStatus('No response to insert', 'error');
-            }
-        }
-
         function showStatus(message, type) {
             const statusDiv = document.getElementById('access-status');
             statusDiv.className = `status ${type}`;
@@ -530,7 +745,8 @@
 
         // Handle Enter key in prompt textarea
         document.getElementById('prompt').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && e.ctrlKey) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
                 sendToAI();
             }
         });
