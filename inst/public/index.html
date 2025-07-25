@@ -207,11 +207,32 @@
             if (!prompt.trim()) return;
             output.innerHTML = "🤔 Thinking...";
             sendBtn.disabled = true;
+            
             try {
+                // First, capture RStudio context
+                let contextData = null;
+                try {
+                    const contextResponse = await fetch(`http://127.0.0.1:${currentPort}/context`);
+                    if (contextResponse.ok) {
+                        contextData = await contextResponse.json();
+                        console.log('Captured context:', contextData);
+                    }
+                } catch (contextError) {
+                    console.log('Could not capture context:', contextError.message);
+                }
+                
+                // Send chat request with context
+                const requestBody = {
+                    access_code: accessCode,
+                    prompt: prompt,
+                    context_data: contextData,
+                    context_type: "general"
+                };
+                
                 const response = await fetch(`${backendUrl}/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ access_code: accessCode, prompt: prompt })
+                    body: JSON.stringify(requestBody)
                 });
                 if (response.ok) {
                     const data = await response.json();
