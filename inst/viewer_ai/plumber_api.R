@@ -8,6 +8,18 @@ library(jsonlite)
 # Configure jsonlite to auto-unbox single values to prevent array wrapping
 options(jsonlite.auto_unbox = TRUE)
 
+# Custom JSON serializer to ensure proper formatting
+custom_json_serializer <- function(val, req, res, errorHandler) {
+  # Convert the result to JSON with explicit auto_unbox
+  json_string <- jsonlite::toJSON(val, auto_unbox = TRUE, pretty = FALSE)
+  
+  # Set content type
+  res$setHeader("Content-Type", "application/json")
+  
+  # Return the JSON string
+  return(json_string)
+}
+
 #* @get /
 #* @serializer html
 function() {
@@ -21,7 +33,7 @@ function() {
 }
 
 #* @get /context
-#* @serializer json
+#* @serializer custom_json_serializer
 function() {
   tryCatch({
     # Get document content as a simple string
@@ -171,20 +183,20 @@ function() {
       character(0)  # Return empty vector on error
     })
     
-    # Create the result list with proper handling of single values
+    # Create the result list with explicit handling to prevent array wrapping
     result <- list(
-      document_content = document_content,  # Already a string, no need for as.character()
+      document_content = if(length(document_content) == 1) document_content[[1]] else document_content,
       console_history = console_history,
       workspace_objects = workspace_objects,
       environment_info = environment_info,
-      custom_functions = custom_functions,  # Always a clean character vector
-      plot_history = plot_history,  # Always a clean character vector
-      error_history = error_history,  # Always a clean character vector
+      custom_functions = custom_functions,
+      plot_history = plot_history,
+      error_history = error_history,
       timestamp = as.character(Sys.time()),
       source = "rstudio_plumber_context"
     )
     
-    # Ensure single values are not wrapped in arrays by using jsonlite's auto_unbox
+    # Explicitly ensure single values are not wrapped in arrays
     result
     
   }, error = function(e) {
@@ -197,7 +209,7 @@ function() {
 }
 
 #* @post /insert_code
-#* @serializer json
+#* @serializer custom_json_serializer
 function(req) {
   code <- req$body$code
   tryCatch({
@@ -209,7 +221,7 @@ function(req) {
 }
 
 #* @get /health
-#* @serializer json
+#* @serializer custom_json_serializer
 function() {
   list(status = "healthy", service = "rstudio-plumber-api")
 }
