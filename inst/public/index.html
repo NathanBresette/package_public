@@ -785,14 +785,8 @@
                 console.log('Streaming response headers:', Object.fromEntries(response.headers.entries()));
 
                 if (!response.ok) {
-                    // For streaming responses, we need to handle errors differently
-                    let errorMessage = 'Unknown error';
-                    try {
-                        const errorData = await response.json();
-                        errorMessage = errorData.detail || errorData.error || errorMessage;
-                    } catch (e) {
-                        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-                    }
+                    // For streaming responses, we can't use response.json() - it locks the stream
+                    const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
                     throw new Error(errorMessage);
                 }
 
