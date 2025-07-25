@@ -128,7 +128,10 @@
         let accessCode = null;
         let lastResponse = "";
         const backendUrl = "https://rgent.onrender.com";
-        const plumberUrl = "http://127.0.0.1:8888/insert_code"; // This will be dynamically replaced
+        // Dynamically get the port from the current URL
+        const currentPort = window.location.port;
+        const plumberUrl = `http://127.0.0.1:${currentPort}/insert_code`;
+        
         // Access code validation
         document.getElementById('validateBtn').addEventListener('click', validateAccessCode);
         document.getElementById('accessCodeInput').addEventListener('keydown', function(e) {
@@ -136,6 +139,7 @@
                 validateAccessCode();
             }
         });
+        
         async function validateAccessCode() {
             const code = document.getElementById('accessCodeInput').value.trim();
             if (!code) {
@@ -163,11 +167,13 @@
                 showAccessStatus(`❌ Error: ${error.message}`, 'error');
             }
         }
+        
         function showAccessStatus(message, type) {
             const statusDiv = document.getElementById('accessStatus');
             statusDiv.textContent = message;
             statusDiv.className = `access-status ${type}`;
         }
+        
         // Chat functionality
         document.getElementById('sendBtn').addEventListener('click', sendToAI);
         document.getElementById('insertBtn').addEventListener('click', insertCode);
@@ -179,6 +185,7 @@
                 sendToAI();
             }
         });
+        
         async function loadUsage() {
             if (!accessCode) return;
             try {
@@ -191,6 +198,7 @@
                 document.getElementById('usageDisplay').textContent = 'Error loading usage';
             }
         }
+        
         async function sendToAI() {
             const prompt = document.getElementById('prompt').value;
             const output = document.getElementById('output');
@@ -221,6 +229,7 @@
                 sendBtn.disabled = false;
             }
         }
+        
         async function insertCode() {
             if (!lastResponse) return;
             try {
@@ -238,6 +247,7 @@
                 document.getElementById('output').innerHTML += `<br><strong>❌ Error inserting code: ${error.message}</strong>`;
             }
         }
+        
         async function clearContext() {
             if (!accessCode) return;
             try {
