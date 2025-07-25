@@ -754,8 +754,20 @@
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || errorData.error || 'Unknown error');
+                    // For streaming responses, we need to handle errors differently
+                    let errorMessage = 'Unknown error';
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.detail || errorData.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                // Check if response body is readable
+                if (!response.body) {
+                    throw new Error('Response body is not readable');
                 }
 
                 // Remove typing indicator and create streaming message
@@ -768,50 +780,98 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
 
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
 
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data = JSON.parse(line.slice(6));
-                                
-                                if (data.chunk) {
-                                    fullResponse += data.chunk;
-                                    // Update the message content with formatted text
-                                    messageContent.innerHTML = formatMessage(fullResponse);
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
                                     
-                                    // Scroll to bottom
-                                    const messagesContainer = document.getElementById('messages-container');
-                                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                                }
-
-                                if (data.done) {
-                                    // Store conversation ID for future messages
-                                    if (data.conversation_id) {
-                                        currentConversationId = data.conversation_id;
+                                    if (data.chunk) {
+                                        fullResponse += data.chunk;
+                                        // Update the message content with formatted text
+                                        messageContent.innerHTML = formatMessage(fullResponse);
+                                        
+                                        // Scroll to bottom
+                                        const messagesContainer = document.getElementById('messages-container');
+                                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
                                     }
-                                    
-                                    // Finalize the message (remove streaming class)
-                                    streamingMessage.classList.remove('streaming');
-                                    loadStats(); // Refresh stats after successful request
-                                    break;
+
+                                    if (data.done) {
+                                        // Store conversation ID for future messages
+                                        if (data.conversation_id) {
+                                            currentConversationId = data.conversation_id;
+                                        }
+                                        
+                                        // Finalize the message (remove streaming class)
+                                        streamingMessage.classList.remove('streaming');
+                                        loadStats(); // Refresh stats after successful request
+                                        break;
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing streaming data:', e);
                                 }
-                            } catch (e) {
-                                console.error('Error parsing streaming data:', e);
                             }
                         }
+                    }
+                } catch (streamError) {
+                    console.error('Error reading stream:', streamError);
+                    throw new Error('Failed to read streaming response: ' + streamError.message);
+                } finally {
+                    // Always close the reader
+                    try {
+                        reader.releaseLock();
+                    } catch (e) {
+                        console.error('Error releasing reader lock:', e);
                     }
                 }
 
             } catch (error) {
                 // Remove typing indicator
                 typingMessage.remove();
-                addMessage('Error: ' + error.message, false);
+                
+                // If streaming failed, try non-streaming endpoint as fallback
+                if (error.message.includes('streaming') || error.message.includes('readable')) {
+                    console.log('Streaming failed, trying non-streaming endpoint...');
+                    try {
+                        const fallbackResponse = await fetch('https://rgent.onrender.com/chat', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                access_code: accessCode,
+                                prompt: prompt,
+                                context_data: contextData,
+                                context_type: 'rstudio',
+                                conversation_id: currentConversationId,
+                                new_conversation: !currentConversationId
+                            })
+                        });
+
+                        if (fallbackResponse.ok) {
+                            const fallbackData = await fallbackResponse.json();
+                            addMessage(fallbackData.response, false);
+                            
+                            if (fallbackData.conversation_id) {
+                                currentConversationId = fallbackData.conversation_id;
+                            }
+                            loadStats();
+                        } else {
+                            throw new Error('Fallback endpoint also failed');
+                        }
+                    } catch (fallbackError) {
+                        addMessage('Error: ' + error.message + ' (Fallback also failed)', false);
+                    }
+                } else {
+                    addMessage('Error: ' + error.message, false);
+                }
             } finally {
                 // Re-enable send button
                 sendBtn.disabled = false;
