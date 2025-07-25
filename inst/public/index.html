@@ -450,10 +450,14 @@
         }
 
         function insertIntoEditor() {
+            console.log('Insert into Editor clicked');
             const response = document.getElementById('response').textContent;
+            console.log('Response text:', response);
+            
             if (response && response !== 'Processing...') {
                 // Extract just the code from the response
                 const codeToInsert = extractCodeFromResponse(response);
+                console.log('Code to insert:', codeToInsert);
                 
                 // Send the extracted code to the local plumber server for insertion
                 fetch('/insert_code', {
@@ -463,8 +467,12 @@
                     },
                     body: JSON.stringify({ code: codeToInsert })
                 })
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Insert response status:', response.status);
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Insert response data:', data);
                     if (data.success) {
                         showStatus('Code extracted and inserted into RStudio editor!', 'success');
                     } else {
@@ -472,9 +480,11 @@
                     }
                 })
                 .catch(error => {
+                    console.error('Insert error:', error);
                     showStatus('Error inserting code: ' + error.message, 'error');
                 });
             } else {
+                console.log('No response to insert');
                 showStatus('No response to insert', 'error');
             }
         }
