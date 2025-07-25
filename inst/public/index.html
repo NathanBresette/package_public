@@ -209,6 +209,8 @@
             sendBtn.disabled = true;
             
             try {
+                // Temporarily disable context capture to test basic functionality
+                /*
                 // First, capture RStudio context
                 let contextData = null;
                 try {
@@ -220,12 +222,13 @@
                 } catch (contextError) {
                     console.log('Could not capture context:', contextError.message);
                 }
+                */
                 
-                // Send chat request with context
+                // Send chat request without context for now
                 const requestBody = {
                     access_code: accessCode,
                     prompt: prompt,
-                    context_data: contextData,
+                    context_data: null,  // Temporarily disable context
                     context_type: "general"
                 };
                 
