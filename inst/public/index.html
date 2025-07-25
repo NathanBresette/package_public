@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RStudio AI Assistant</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #333;
+        }
+        .access-section {
+            background: #f8f9fa;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            max-width: 400px;
+            margin: 40px auto 0 auto;
+        }
+        .access-section h2 {
+            margin-bottom: 20px;
+        }
+        .access-input {
+            max-width: 300px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .validate-btn {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .validate-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .access-status {
+            margin-top: 15px;
+            font-weight: 600;
+        }
+        .access-status.success {
+            color: #28a745;
+        }
+        .access-status.error {
+            color: #dc3545;
+        }
+        .chat-section {
+            display: none;
+            margin-top: 40px;
+        }
+        .usage-info {
+            background: #e2e3e5;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            border-radius: 4px;
+        }
+        textarea {
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 4px;
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 60px;
+            margin-bottom: 10px;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 16px;
+            background: #007acc;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #eee;
+            min-height: 100px;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+    </style>
+</head>
+<body>
+    <h2>🤖 RStudio AI Assistant</h2>
+    <!-- Access Code Section -->
+    <div class="access-section" id="accessSection">
+        <h2>🔒 Enter Access Code</h2>
+        <p>Please enter your access code to start using the AI assistant.</p>
+        <input type="text" id="accessCodeInput" class="access-input" placeholder="Enter your access code" />
+        <button id="validateBtn" class="validate-btn">Validate Access</button>
+        <div id="accessStatus" class="access-status"></div>
+    </div>
+    <!-- Chat Section (hidden until access code is validated) -->
+    <div class="chat-section" id="chatSection">
+        <div class="usage-info">
+            <strong>Usage:</strong> <span id="usageDisplay">Loading...</span>
+            <button id="refreshUsage" style="margin-left: 10px; padding: 4px 8px; font-size: 0.8em;">Refresh</button>
+        </div>
+        <textarea id="prompt" placeholder="Ask the AI anything..."></textarea><br>
+        <button id="sendBtn">Send to AI</button>
+        <button id="insertBtn" disabled>Insert Code to RStudio</button>
+        <button id="clearContext" style="background: #6c757d;">Clear Context</button>
+        <div id="output"></div>
+    </div>
+    <script>
+        let accessCode = null;
+        let lastResponse = "";
+        const backendUrl = "https://rgent.onrender.com";
+        const plumberUrl = "http://127.0.0.1:8888/insert_code"; // This will be dynamically replaced
+        // Access code validation
+        document.getElementById('validateBtn').addEventListener('click', validateAccessCode);
+        document.getElementById('accessCodeInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                validateAccessCode();
+            }
+        });
+        async function validateAccessCode() {
+            const code = document.getElementById('accessCodeInput').value.trim();
+            if (!code) {
+                showAccessStatus('Please enter an access code', 'error');
+                return;
+            }
+            showAccessStatus('Validating access code...', 'info');
+            try {
+                const response = await fetch(`${backendUrl}/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ access_code: code })
+                });
+                if (response.ok) {
+                    accessCode = code;
+                    showAccessStatus('✅ Access validated successfully!', 'success');
+                    document.getElementById('accessSection').style.display = 'none';
+                    document.getElementById('chatSection').style.display = 'block';
+                    loadUsage();
+                } else {
+                    const errorData = await response.json();
+                    showAccessStatus(`❌ Access denied: ${errorData.detail || response.statusText}`, 'error');
+                }
+            } catch (error) {
+                showAccessStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        function showAccessStatus(message, type) {
+            const statusDiv = document.getElementById('accessStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = `access-status ${type}`;
+        }
+        // Chat functionality
+        document.getElementById('sendBtn').addEventListener('click', sendToAI);
+        document.getElementById('insertBtn').addEventListener('click', insertCode);
+        document.getElementById('clearContext').addEventListener('click', clearContext);
+        document.getElementById('refreshUsage').addEventListener('click', loadUsage);
+        document.getElementById('prompt').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendToAI();
+            }
+        });
+        async function loadUsage() {
+            if (!accessCode) return;
+            try {
+                const response = await fetch(`${backendUrl}/usage?access_code=${accessCode}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('usageDisplay').textContent = `${data.requests_used}/${data.max_requests} requests used`;
+                }
+            } catch (error) {
+                document.getElementById('usageDisplay').textContent = 'Error loading usage';
+            }
+        }
+        async function sendToAI() {
+            const prompt = document.getElementById('prompt').value;
+            const output = document.getElementById('output');
+            const sendBtn = document.getElementById('sendBtn');
+            const insertBtn = document.getElementById('insertBtn');
+            if (!prompt.trim()) return;
+            output.innerHTML = "🤔 Thinking...";
+            sendBtn.disabled = true;
+            try {
+                const response = await fetch(`${backendUrl}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ access_code: accessCode, prompt: prompt })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    lastResponse = data.response;
+                    output.innerHTML = `<strong>AI Response:</strong><br><pre>${data.response}</pre>`;
+                    insertBtn.disabled = false;
+                    loadUsage();
+                } else {
+                    const errorData = await response.json();
+                    output.innerHTML = `❌ Error: ${errorData.detail || response.statusText}`;
+                }
+            } catch (error) {
+                output.innerHTML = `❌ Error: ${error.message}`;
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+        async function insertCode() {
+            if (!lastResponse) return;
+            try {
+                const response = await fetch(plumberUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: lastResponse })
+                });
+                if (response.ok) {
+                    document.getElementById('output').innerHTML += "<br><strong>✅ Code inserted into RStudio!</strong>";
+                } else {
+                    document.getElementById('output').innerHTML += `<br><strong>❌ Failed to insert code: ${response.status}</strong>`;
+                }
+            } catch (error) {
+                document.getElementById('output').innerHTML += `<br><strong>❌ Error inserting code: ${error.message}</strong>`;
+            }
+        }
+        async function clearContext() {
+            if (!accessCode) return;
+            try {
+                const response = await fetch(`${backendUrl}/context/clear/${accessCode}`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    document.getElementById('output').innerHTML = "<strong>✅ Context cleared!</strong>";
+                    document.getElementById('prompt').value = "";
+                    lastResponse = "";
+                    document.getElementById('insertBtn').disabled = true;
+                } else {
+                    document.getElementById('output').innerHTML += "<br><strong>❌ Failed to clear context</strong>";
+                }
+            } catch (error) {
+                document.getElementById('output').innerHTML += `<br><strong>❌ Error clearing context: ${error.message}</strong>`;
+            }
+        }
+    </script>
+</body>
+</html> 
+ 
