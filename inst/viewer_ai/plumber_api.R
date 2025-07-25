@@ -11,7 +11,6 @@ function() {
 }
 
 #* @get /context
-#* @serializer json
 function() {
   tryCatch({
     # Get document content as a simple string
@@ -163,25 +162,20 @@ function() {
       c(paste("Error reading error history:", e$message))
     })
     
-    # Create the result list with proper JSON serialization
-    # Use jsonlite to ensure single values are not wrapped in arrays
-    library(jsonlite)
-    
+    # Create the result list with explicit string conversion for single values
     result <- list(
-      document_content = document_content,
+      document_content = as.character(document_content),
       console_history = console_history,
       workspace_objects = workspace_objects,
       environment_info = environment_info,
-      custom_functions = custom_functions,
-      plot_history = plot_history,
-      error_history = error_history,
+      custom_functions = if(length(custom_functions) == 1) as.character(custom_functions[1]) else custom_functions,
+      plot_history = if(length(plot_history) == 1) as.character(plot_history[1]) else plot_history,
+      error_history = if(length(error_history) == 1) as.character(error_history[1]) else error_history,
       timestamp = as.character(Sys.time()),
       source = "rstudio_plumber_context"
     )
     
-    # Convert to JSON and back to ensure proper structure
-    json_str <- toJSON(result, auto_unbox = TRUE, null = "null")
-    fromJSON(json_str)
+    result
     
   }, error = function(e) {
     list(
