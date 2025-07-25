@@ -73,8 +73,10 @@ ai_addin_viewer <- function(port = NULL) {
     file_url <- paste0("file://", normalizePath(html_file), "?port=", port)
     cat("Opening URL:", file_url, "\n")
     
-    # Try to open in browser
-    tryCatch({
+    # Open in RStudio Viewer if available, else fallback to system browser
+    if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+      rstudioapi::viewer(file_url)
+    } else {
       if (Sys.info()["sysname"] == "Darwin") {
         system(paste("open", file_url))
       } else if (Sys.info()["sysname"] == "Linux") {
@@ -82,14 +84,11 @@ ai_addin_viewer <- function(port = NULL) {
       } else if (Sys.info()["sysname"] == "Windows") {
         system(paste("start", file_url))
       }
-      cat("AI Assistant launched successfully!\n")
-      cat("The AI assistant is now open in your browser.\n")
-      cat("Use access code 'DEMO123' or 'TEST456' to validate access.\n")
-      cat("AI responses come from Render backend, code insertion uses local plumber API.\n")
-    }, error = function(e) {
-      cat("Failed to open browser:", e$message, "\n")
-      cat("Please manually open:", file_url, "\n")
-    })
+    }
+    cat("AI Assistant launched successfully!\n")
+    cat("The AI assistant is now open in your browser or RStudio Viewer.\n")
+    cat("Use access code 'DEMO123' or 'TEST456' to validate access.\n")
+    cat("AI responses come from Render backend, code insertion uses local plumber API.\n")
   } else {
     cat("HTML file not found:", html_file, "\n")
     return(invisible(FALSE))
