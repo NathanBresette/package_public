@@ -250,10 +250,6 @@
                         <h4>Monthly Budget</h4>
                         <div id="monthly-budget">-</div>
                     </div>
-                    <div class="stat-card">
-                        <h4>Context Items</h4>
-                        <div id="context-items">-</div>
-                    </div>
                 </div>
 
                 <button class="btn btn-secondary" onclick="refreshStats()">Refresh Stats</button>
@@ -381,7 +377,6 @@
                 if (response.ok) {
                     document.getElementById('today-requests').textContent = data.today_requests || 0;
                     document.getElementById('monthly-budget').textContent = `$${data.monthly_budget || 0}`;
-                    document.getElementById('context-items').textContent = data.context_items || 0;
                 }
             } catch (error) {
                 console.error('Failed to load stats:', error);
@@ -415,8 +410,25 @@
         function insertIntoEditor() {
             const response = document.getElementById('response').textContent;
             if (response && response !== 'Processing...') {
-                // This would integrate with RStudio's API in the actual add-in
-                showStatus('Code insertion feature available in RStudio add-in', 'info');
+                // Send the response text to the local plumber server for insertion
+                fetch('/insert_code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code: response })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showStatus('Code inserted into RStudio editor!', 'success');
+                    } else {
+                        showStatus('Failed to insert code: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showStatus('Error inserting code: ' + error.message, 'error');
+                });
             } else {
                 showStatus('No response to insert', 'error');
             }
