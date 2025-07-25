@@ -442,6 +442,7 @@
                 <button class="btn" onclick="clearContext()">Clear Context</button>
                 <button class="btn" onclick="startNewConversation()">New Conversation</button>
                 <div id="rstudio-status" class="status info hidden">Checking RStudio connection...</div>
+                <div id="main-status" class="status info hidden"></div>
             </div>
 
             <!-- Chat Container -->
@@ -567,6 +568,8 @@
         }
 
         function copyCode(blockId, code) {
+            console.log('Copy function called with blockId:', blockId, 'and code length:', code ? code.length : 0);
+            
             // Unescape the code to restore original formatting
             let text = code || '';
             text = text
@@ -581,9 +584,13 @@
             text = text.replace(/\u00A0/g, ' '); // Replace non-breaking spaces with regular spaces
             text = text.trim(); // Remove leading/trailing whitespace
             
+            console.log('Unescaped text to copy:', text.substring(0, 100) + '...');
+            
             navigator.clipboard.writeText(text).then(() => {
+                console.log('Code copied successfully via clipboard API');
                 showStatus('Code copied to clipboard with formatting!', 'success');
-            }).catch(() => {
+            }).catch((error) => {
+                console.log('Clipboard API failed, using fallback:', error);
                 // Fallback for older browsers
                 const textArea = document.createElement('textarea');
                 textArea.value = text;
@@ -593,6 +600,7 @@
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
+                console.log('Code copied successfully via fallback method');
                 showStatus('Code copied to clipboard with formatting!', 'success');
             });
         }
@@ -886,9 +894,19 @@
         }
 
         function showStatus(message, type) {
-            const statusDiv = document.getElementById('access-status');
+            // Determine which status div to use based on current interface
+            let statusDiv;
+            if (document.getElementById('main-interface').classList.contains('hidden')) {
+                // Still in access code phase
+                statusDiv = document.getElementById('access-status');
+            } else {
+                // In main interface
+                statusDiv = document.getElementById('main-status');
+            }
+            
             statusDiv.className = `status ${type}`;
             statusDiv.textContent = message;
+            statusDiv.classList.remove('hidden');
             
             // Auto-hide success/info messages after 3 seconds
             if (type === 'success' || type === 'info') {
