@@ -79,6 +79,14 @@ ai_addin_viewer <- function(port = NULL) {
         cat("Process class:", class(plumber_process), "\n")
         if (!is.null(plumber_process)) {
           cat("Process status:", ifelse(plumber_process$is_alive(), "alive", "dead"), "\n")
+          cat("\n--- Plumber process output ---\n")
+          tryCatch({
+            cat(plumber_process$read_all_output(), sep = "\n")
+          }, error = function(e) cat("Could not read output:", e$message, "\n"))
+          cat("\n--- Plumber process error ---\n")
+          tryCatch({
+            cat(plumber_process$read_all_error(), sep = "\n")
+          }, error = function(e) cat("Could not read error:", e$message, "\n"))
         }
         cat("Please check if the Plumber API file exists and is valid.\n")
         stop("Server did not start in time.")
