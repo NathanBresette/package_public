@@ -422,7 +422,6 @@
                         <div id="monthly-budget">-</div>
                     </div>
                 </div>
-                <button class="btn" onclick="refreshStats()">Refresh Stats</button>
                 <button class="btn" onclick="clearContext()">Clear Context</button>
                 <button class="btn" onclick="startNewConversation()">New Conversation</button>
                 <div id="rstudio-status" class="status info hidden">Checking RStudio connection...</div>
@@ -518,13 +517,22 @@
             // Clean up the code formatting
             let cleanCode = code.trim();
             
+            // Escape the code for the onclick attributes
+            let escapedCode = cleanCode
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '\\"')
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\r')
+                .replace(/\t/g, '\\t');
+            
             return `
                 <div class="code-block">
                     <div class="code-header">
                         <span class="code-language">${language.toUpperCase()}</span>
                         <div class="code-actions">
-                            <button class="code-btn" onclick="copyCode('${blockId}')">Copy</button>
-                            <button class="code-btn success" onclick="insertCode('${blockId}')">Insert</button>
+                            <button class="code-btn" onclick="copyCode('${blockId}', '${escapedCode}')">Copy</button>
+                            <button class="code-btn success" onclick="insertCode('${blockId}', '${escapedCode}')">Insert</button>
                         </div>
                     </div>
                     <div id="${blockId}" class="code-content">${escapeHtml(cleanCode)}</div>
@@ -538,10 +546,16 @@
             return div.innerHTML;
         }
 
-        function copyCode(blockId) {
-            const codeElement = document.getElementById(blockId);
-            // Get the raw text content and preserve formatting
-            let text = codeElement.textContent || codeElement.innerText;
+        function copyCode(blockId, code) {
+            // Unescape the code to restore original formatting
+            let text = code || '';
+            text = text
+                .replace(/\\n/g, '\n')
+                .replace(/\\r/g, '\r')
+                .replace(/\\t/g, '\t')
+                .replace(/\\'/g, "'")
+                .replace(/\\"/g, '"')
+                .replace(/\\\\/g, '\\');
             
             // Ensure proper line breaks and indentation are preserved
             text = text.replace(/\u00A0/g, ' '); // Replace non-breaking spaces with regular spaces
@@ -563,23 +577,29 @@
             });
         }
 
-        function insertCode(blockId) {
-            const codeElement = document.getElementById(blockId);
-            // Get the raw text content and preserve formatting
-            let code = codeElement.textContent || codeElement.innerText;
+        function insertCode(blockId, code) {
+            // Unescape the code to restore original formatting
+            let text = code || '';
+            text = text
+                .replace(/\\n/g, '\n')
+                .replace(/\\r/g, '\r')
+                .replace(/\\t/g, '\t')
+                .replace(/\\'/g, "'")
+                .replace(/\\"/g, '"')
+                .replace(/\\\\/g, '\\');
             
             // Ensure proper line breaks and indentation are preserved
-            code = code.replace(/\u00A0/g, ' '); // Replace non-breaking spaces with regular spaces
-            code = code.trim(); // Remove leading/trailing whitespace
+            text = text.replace(/\u00A0/g, ' '); // Replace non-breaking spaces with regular spaces
+            text = text.trim(); // Remove leading/trailing whitespace
             
-            console.log('Attempting to insert code:', code);
+            console.log('Attempting to insert code:', text);
             
             fetch('/insert_code', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ code: code })
+                body: JSON.stringify({ code: text })
             })
             .then(response => {
                 console.log('Insert response status:', response.status);
@@ -604,7 +624,7 @@
                 if (error.message.includes('RStudio connection')) {
                     showStatus('RStudio not connected. Code copied to clipboard instead.', 'warning');
                     // Fallback: copy to clipboard
-                    navigator.clipboard.writeText(code).then(() => {
+                    navigator.clipboard.writeText(text).then(() => {
                         showStatus('Code copied to clipboard (RStudio not available)', 'info');
                     }).catch(() => {
                         showStatus('Code copied to clipboard (RStudio not available)', 'info');
@@ -748,10 +768,7 @@
             }
         }
 
-        async function refreshStats() {
-            await loadStats();
-            showStatus('Stats refreshed', 'success');
-        }
+
 
         async function clearContext() {
             if (!isAccessValid) return;
