@@ -6,17 +6,18 @@ function(pr) {
       static_dir <- system.file("public", package = "rstudioai")
       html_file <- file.path(static_dir, "index.html")
       if (file.exists(html_file)) {
+        html_content <- paste(readLines(html_file), collapse = "\n")
+        # Set content type and return HTML directly
         res$setHeader("Content-Type", "text/html")
         res$setHeader("Cache-Control", "no-cache")
-        html_content <- paste(readLines(html_file), collapse = "\n")
-        res$write(html_content)
+        return(html_content)
       } else {
         res$status <- 404
-        res$body <- list(error = "HTML file not found")
+        return(list(error = "HTML file not found"))
       }
     }, error = function(e) {
       res$status <- 500
-      res$body <- list(error = paste("Server error:", e$message))
+      return(list(error = paste("Server error:", e$message)))
     })
   })
   
