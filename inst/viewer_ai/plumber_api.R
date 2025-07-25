@@ -9,7 +9,7 @@ function(pr) {
         res$setHeader("Content-Type", "text/html")
         res$setHeader("Cache-Control", "no-cache")
         html_content <- paste(readLines(html_file), collapse = "\n")
-        res$body <- html_content
+        res$write(html_content)
       } else {
         res$status <- 404
         res$body <- list(error = "HTML file not found")
