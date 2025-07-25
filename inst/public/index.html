@@ -407,21 +407,66 @@
             }
         }
 
+        function extractCodeFromResponse(responseText) {
+            // Look for code blocks marked with ```r, ```, or ```{r}
+            const codeBlockRegex = /```(?:r|{r})?\s*\n([\s\S]*?)```/g;
+            const codeBlocks = [];
+            let match;
+            
+            while ((match = codeBlockRegex.exec(responseText)) !== null) {
+                codeBlocks.push(match[1].trim());
+            }
+            
+            // If no code blocks found, look for lines that look like R code
+            if (codeBlocks.length === 0) {
+                const lines = responseText.split('\n');
+                const codeLines = lines.filter(line => {
+                    const trimmed = line.trim();
+                    // Look for lines that look like R code (functions, assignments, etc.)
+                    return trimmed && (
+                        trimmed.startsWith('function(') ||
+                        trimmed.includes('<-') ||
+                        trimmed.includes('=') ||
+                        trimmed.startsWith('if(') ||
+                        trimmed.startsWith('for(') ||
+                        trimmed.startsWith('while(') ||
+                        trimmed.startsWith('library(') ||
+                        trimmed.startsWith('require(') ||
+                        trimmed.startsWith('data(') ||
+                        trimmed.startsWith('plot(') ||
+                        trimmed.startsWith('ggplot(') ||
+                        trimmed.startsWith('print(') ||
+                        trimmed.startsWith('cat(') ||
+                        trimmed.startsWith('return(') ||
+                        trimmed.startsWith('#'))
+                });
+                
+                if (codeLines.length > 0) {
+                    codeBlocks.push(codeLines.join('\n'));
+                }
+            }
+            
+            return codeBlocks.length > 0 ? codeBlocks.join('\n\n') : responseText;
+        }
+
         function insertIntoEditor() {
             const response = document.getElementById('response').textContent;
             if (response && response !== 'Processing...') {
-                // Send the response text to the local plumber server for insertion
+                // Extract just the code from the response
+                const codeToInsert = extractCodeFromResponse(response);
+                
+                // Send the extracted code to the local plumber server for insertion
                 fetch('/insert_code', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ code: response })
+                    body: JSON.stringify({ code: codeToInsert })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showStatus('Code inserted into RStudio editor!', 'success');
+                        showStatus('Code extracted and inserted into RStudio editor!', 'success');
                     } else {
                         showStatus('Failed to insert code: ' + data.message, 'error');
                     }
