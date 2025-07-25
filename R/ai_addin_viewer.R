@@ -73,9 +73,10 @@ ai_addin_viewer <- function(port = NULL) {
     file_url <- paste0("file://", normalizePath(html_file), "?port=", port)
     cat("Opening URL:", file_url, "\n")
     
-    # Open in RStudio Viewer only
+    # Open in RStudio Viewer only, using the local HTTP server
+    viewer_url <- sprintf("http://127.0.0.1:%d/", port)
     if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-      rstudioapi::viewer(file_url)
+      rstudioapi::viewer(viewer_url)
       cat("AI Assistant launched successfully in the RStudio Viewer pane!\n")
     } else {
       stop("RStudio Viewer is not available. Please run this addin inside RStudio.")

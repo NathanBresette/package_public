@@ -4,6 +4,18 @@
 library(plumber)
 library(rstudioapi)
 
+# Serve static files (index.html and assets) from the package's public directory
+#' @plumber
+function(pr) {
+  pr$handle("GET", "/", function(req, res) {
+    static_dir <- system.file("public", package = "rstudioai")
+    res$setHeader("Cache-Control", "no-cache")
+    res$sendFile(file.path(static_dir, "index.html"))
+  })
+  pr$mount("/static", plumber::pr_static(system.file("public", package = "rstudioai")))
+  pr
+}
+
 #* @post /insert_code
 #* @param code:string The code to insert into RStudio
 function(code) {
