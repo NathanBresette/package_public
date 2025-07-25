@@ -26,41 +26,64 @@ function() {
       })
     }
     
-    # Get console history
+    # Get console history as a list
     console_history <- tryCatch({
       history_file <- Sys.getenv("R_HISTFILE", file.path(Sys.getenv("HOME"), ".Rhistory"))
       if (file.exists(history_file)) {
-        hist_lines <- readLines(history_file, n = 50)
-        paste("Console History (last 50 lines):", paste(hist_lines, collapse = "\n"), sep = "\n")
+        readLines(history_file, n = 50)
       } else {
-        "Console History: Not available"
+        list("Console History: Not available")
       }
-    }, error = function(e) "Console History: Error reading")
+    }, error = function(e) {
+      list("Console History: Error reading")
+    })
     
-    # Get workspace objects with detailed info
+    # Get workspace objects as a dictionary with detailed info
     workspace_objects <- tryCatch({
       objects <- ls(envir = .GlobalEnv)
       if (length(objects) > 0) {
-        obj_info <- sapply(objects, function(obj) {
+        obj_dict <- list()
+        for (obj in objects) {
           tryCatch({
             val <- get(obj, envir = .GlobalEnv)
             class_info <- paste(class(val), collapse = ", ")
-            size_info <- if (is.data.frame(val)) paste(nrow(val), "rows,", ncol(val), "cols") else length(val)
-            paste(obj, ":", class_info, "(", size_info, ")")
-          }, error = function(e) paste(obj, ": Error getting info"))
-        })
-        paste("Workspace Objects:", paste(obj_info, collapse = "\n"), sep = "\n")
+            
+            # Create detailed object info
+            obj_info <- list(
+              type = if ("data.frame" %in% class(val)) "dataframe" else if (is.vector(val)) "vector" else if (is.list(val)) "list" else if (is.function(val)) "function" else "other",
+              size = if (is.data.frame(val)) paste(nrow(val), "rows,", ncol(val), "cols") else length(val),
+              class = class_info
+            )
+            
+            # Add type-specific details
+            if (is.data.frame(val)) {
+              obj_info$columns <- colnames(val)
+              obj_info$data_types <- sapply(val, class)
+            } else if (is.vector(val) && length(val) > 0) {
+              obj_info$vector_type <- class(val)[1]
+              obj_info$sample_values <- as.list(head(val, 5))
+            } else if (is.list(val)) {
+              obj_info$length <- length(val)
+              obj_info$names <- names(val)
+            } else if (is.function(val)) {
+              obj_info$arguments <- names(formals(val))
+            }
+            
+            obj_dict[[obj]] <- obj_info
+          }, error = function(e) {
+            obj_dict[[obj]] <<- list(type = "error", size = "unknown", class = "error", error = e$message)
+          })
+        }
+        obj_dict
       } else {
-        "Workspace Objects: None"
+        list()
       }
-    }, error = function(e) "Workspace Objects: Error reading")
+    }, error = function(e) {
+      list(error = paste("Error reading workspace objects:", e$message))
+    })
     
-    # Get environment information
+    # Get environment information as a dictionary
     environment_info <- tryCatch({
-      r_version <- paste("R Version:", R.version.string)
-      platform <- paste("Platform:", R.version$platform)
-      wd <- paste("Working Directory:", getwd())
-      
       # Get loaded packages
       loaded_packages <- tryCatch({
         pkgs <- names(sessionInfo()$otherPkgs)
@@ -71,16 +94,25 @@ function() {
               paste(pkg, "v", version)
             }, error = function(e) pkg)
           })
-          paste("Loaded Packages:", paste(pkg_versions, collapse = ", "))
+          as.list(pkg_versions)
         } else {
-          "Loaded Packages: None"
+          list()
         }
-      }, error = function(e) "Loaded Packages: Error reading")
+      }, error = function(e) {
+        list(error = paste("Error reading packages:", e$message))
+      })
       
-      paste("Environment Info:", r_version, platform, wd, loaded_packages, sep = "\n")
-    }, error = function(e) "Environment Info: Error reading")
+      list(
+        r_version = R.version.string,
+        platform = R.version$platform,
+        working_directory = getwd(),
+        packages = loaded_packages
+      )
+    }, error = function(e) {
+      list(error = paste("Error reading environment info:", e$message))
+    })
     
-    # Get custom functions (simplified)
+    # Get custom functions as a list
     custom_functions <- tryCatch({
       objects <- ls(envir = .GlobalEnv)
       funcs <- objects[sapply(objects, function(obj) {
@@ -89,14 +121,12 @@ function() {
           is.function(val)
         }, error = function(e) FALSE)
       })]
-      if (length(funcs) > 0) {
-        paste("Custom Functions:", paste(funcs, collapse = ", "))
-      } else {
-        "Custom Functions: None"
-      }
-    }, error = function(e) "Custom Functions: Error reading")
+      as.list(funcs)
+    }, error = function(e) {
+      list(error = paste("Error reading functions:", e$message))
+    })
     
-    # Get plot history (simplified)
+    # Get plot history as a list
     plot_history <- tryCatch({
       plot_objects <- ls(envir = .GlobalEnv)[sapply(ls(envir = .GlobalEnv), function(obj) {
         tryCatch({
@@ -104,25 +134,32 @@ function() {
           inherits(val, c("ggplot", "trellis", "plot"))
         }, error = function(e) FALSE)
       })]
-      if (length(plot_objects) > 0) {
-        paste("Plot Objects:", paste(plot_objects, collapse = ", "))
-      } else {
-        "Plot Objects: None"
-      }
-    }, error = function(e) "Plot History: Error reading")
+      as.list(plot_objects)
+    }, error = function(e) {
+      list(error = paste("Error reading plot history:", e$message))
+    })
     
-    # Get error history (simplified)
+    # Get error history as a list
     error_history <- tryCatch({
-      last_error <- ""
+      errors <- list()
       if (exists(".Last.error", envir = .GlobalEnv)) {
-        last_error <- paste("Last Error:", paste(capture.output(print(get(".Last.error", envir = .GlobalEnv))), collapse = "\n"))
+        last_error <- get(".Last.error", envir = .GlobalEnv)
+        errors$last_error <- paste(capture.output(print(last_error)), collapse = "\n")
       }
-      if (last_error == "") {
-        "Error History: None"
+      if (exists("last.warning", envir = .GlobalEnv)) {
+        last_warnings <- get("last.warning", envir = .GlobalEnv)
+        if (length(last_warnings) > 0) {
+          errors$warnings <- paste(capture.output(print(last_warnings)), collapse = "\n")
+        }
+      }
+      if (length(errors) == 0) {
+        list("No recent errors")
       } else {
-        last_error
+        errors
       }
-    }, error = function(e) "Error History: Error reading")
+    }, error = function(e) {
+      list(error = paste("Error reading error history:", e$message))
+    })
     
     # Return context in the format expected by the backend
     list(
