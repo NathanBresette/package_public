@@ -752,6 +752,16 @@
                 }
 
                 // Use streaming endpoint
+                console.log('About to make fetch request to backend...');
+                console.log('Request body:', {
+                    access_code: accessCode,
+                    prompt: prompt,
+                    context_data: contextData,
+                    context_type: 'rstudio',
+                    conversation_id: currentConversationId,
+                    new_conversation: !currentConversationId
+                });
+                
                 const response = await fetch('https://rgent.onrender.com/chat/stream', {
                     method: 'POST',
                     headers: {
@@ -768,6 +778,8 @@
                     // Add timeout for streaming requests
                     signal: AbortSignal.timeout(60000) // 60 second timeout
                 });
+                
+                console.log('Fetch request completed!');
 
                 console.log('Streaming response status:', response.status);
                 console.log('Streaming response headers:', Object.fromEntries(response.headers.entries()));
@@ -898,6 +910,12 @@
                 }
 
             } catch (error) {
+                console.error('Streaming error details:', {
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack
+                });
+                
                 // Remove typing indicator
                 typingMessage.remove();
                 
