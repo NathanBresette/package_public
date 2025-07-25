@@ -11,6 +11,7 @@ function() {
 }
 
 #* @get /context
+#* @serializer json
 function() {
   tryCatch({
     # Get document content as a simple string
@@ -162,7 +163,10 @@ function() {
       c(paste("Error reading error history:", e$message))
     })
     
-    # Create the result list
+    # Create the result list with proper JSON serialization
+    # Use jsonlite to ensure single values are not wrapped in arrays
+    library(jsonlite)
+    
     result <- list(
       document_content = document_content,
       console_history = console_history,
@@ -175,16 +179,10 @@ function() {
       source = "rstudio_plumber_context"
     )
     
-    # Force all single-character values to be strings, not arrays
-    # This is the key fix - ensure R doesn't wrap single values in arrays
-    for (name in names(result)) {
-      if (is.character(result[[name]]) && length(result[[name]]) == 1) {
-        # Extract the single value to prevent array wrapping
-        result[[name]] <- result[[name]][1]
-      }
-    }
+    # Convert to JSON and back to ensure proper structure
+    json_str <- toJSON(result, auto_unbox = TRUE, null = "null")
+    fromJSON(json_str)
     
-    result
   }, error = function(e) {
     list(
       error = paste("Error capturing context:", e$message),
