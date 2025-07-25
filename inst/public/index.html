@@ -410,20 +410,32 @@
         function extractCodeFromResponse(responseText) {
             console.log('Extracting code from:', responseText);
             
-            // Look for code blocks marked with ```r, ```R, ```, or ```{r}
-            const codeBlockRegex = /```(?:r|R|{r})?\s*\n([\s\S]*?)```/g;
-            const codeBlocks = [];
-            let match;
+            // Try multiple regex patterns to catch different code block formats
+            const patterns = [
+                /```(?:r|R|{r})?\s*\n([\s\S]*?)```/g,
+                /```\s*\n([\s\S]*?)```/g,
+                /`([^`]+)`/g  // Inline code blocks
+            ];
             
-            while ((match = codeBlockRegex.exec(responseText)) !== null) {
-                console.log('Found code block:', match[1]);
-                codeBlocks.push(match[1].trim());
+            const codeBlocks = [];
+            
+            for (let pattern of patterns) {
+                console.log('Trying pattern:', pattern);
+                let match;
+                while ((match = pattern.exec(responseText)) !== null) {
+                    console.log('Found match with pattern:', match[0].substring(0, 50) + '...');
+                    const code = match[1] || match[0];
+                    if (code && code.trim().length > 0) {
+                        codeBlocks.push(code.trim());
+                    }
+                }
             }
             
             console.log('Extracted code blocks:', codeBlocks);
             
             // If no code blocks found, look for lines that look like R code
             if (codeBlocks.length === 0) {
+                console.log('No code blocks found, looking for R code lines...');
                 const lines = responseText.split('\n');
                 const codeLines = lines.filter(line => {
                     const trimmed = line.trim();
