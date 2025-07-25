@@ -51,7 +51,9 @@ ai_addin_viewer <- function(port = NULL) {
       pr <- plumber::plumb(api_file)
       pr$run(host = "127.0.0.1", port = server_port)
     }, args = list(api_file = plumber_api_file, server_port = port))
-    
+
+    cat("plumber_process class:", class(plumber_process), "\n")
+
     # Wait a moment for the server to start
     Sys.sleep(2)
     cat("Local plumber server started on port", port, "\n")
@@ -70,9 +72,13 @@ ai_addin_viewer <- function(port = NULL) {
       if (as.numeric(Sys.time() - start_time, units = "secs") > timeout) {
         if (!is.null(plumber_process)) {
           cat("\n--- Plumber process output ---\n")
-          cat(plumber_process$get_output(), sep = "\n")
+          tryCatch({
+            cat(plumber_process$get_output(), sep = "\n")
+          }, error = function(e) cat("Could not get output:", e$message, "\n"))
           cat("\n--- Plumber process error ---\n")
-          cat(plumber_process$get_error(), sep = "\n")
+          tryCatch({
+            cat(plumber_process$get_error(), sep = "\n")
+          }, error = function(e) cat("Could not get error:", e$message, "\n"))
         }
         stop("Server did not start in time.")
       }
