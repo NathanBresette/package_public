@@ -61,20 +61,26 @@ ai_addin_viewer <- function(port = NULL) {
   }
   
   # Helper: Wait for server to be ready
-  wait_for_server <- function(port, timeout = 10) {
+  wait_for_server <- function(port, timeout = 30, plumber_process = NULL) {
     url <- sprintf("http://127.0.0.1:%d/health", port)
     start_time <- Sys.time()
     repeat {
       res <- tryCatch(httr::GET(url), error = function(e) NULL)
       if (!is.null(res) && httr::status_code(res) == 200) break
       if (as.numeric(Sys.time() - start_time, units = "secs") > timeout) {
+        if (!is.null(plumber_process)) {
+          cat("\n--- Plumber process output ---\n")
+          cat(plumber_process$get_output(), sep = "\n")
+          cat("\n--- Plumber process error ---\n")
+          cat(plumber_process$get_error(), sep = "\n")
+        }
         stop("Server did not start in time.")
       }
       Sys.sleep(0.2)
     }
   }
   
-  wait_for_server(port)
+  wait_for_server(port, timeout = 30, plumber_process = plumber_process)
   
   # 3. Test connection to Render backend
   
