@@ -288,7 +288,7 @@
             showStatus('Validating access code...', 'info');
             
             try {
-                const response = await fetch('https://rgent-ai.onrender.com/validate', {
+                const response = await fetch('https://rgent.onrender.com/validate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -330,7 +330,7 @@
             responseDiv.classList.remove('hidden');
 
             try {
-                const response = await fetch('https://rgent-ai.onrender.com/chat', {
+                const response = await fetch('https://rgent.onrender.com/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -362,7 +362,7 @@
             if (!isAccessValid) return;
 
             try {
-                const response = await fetch(`https://rgent-ai.onrender.com/usage?access_code=${accessCode}`);
+                const response = await fetch(`https://rgent.onrender.com/usage?access_code=${accessCode}`);
                 const data = await response.json();
 
                 if (response.ok) {
@@ -384,7 +384,7 @@
             if (!isAccessValid) return;
 
             try {
-                const response = await fetch(`https://rgent-ai.onrender.com/context/clear/${accessCode}`, {
+                const response = await fetch(`https://rgent.onrender.com/context/clear/${accessCode}`, {
                     method: 'POST'
                 });
 
