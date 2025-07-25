@@ -104,7 +104,7 @@ function() {
       list(error = paste("Error reading environment info:", e$message))
     })
     
-    # Get custom functions as a simple list of strings
+    # Get custom functions as a clean character vector
     custom_functions <- tryCatch({
       objects <- ls(envir = .GlobalEnv)
       funcs <- objects[sapply(objects, function(obj) {
@@ -116,10 +116,10 @@ function() {
       # Convert to simple character vector
       as.character(funcs)
     }, error = function(e) {
-      c(paste("Error reading functions:", e$message))
+      character(0)  # Return empty vector on error
     })
     
-    # Get plot history as a simple list of strings
+    # Get plot history as a clean character vector
     plot_history <- tryCatch({
       plot_objects <- ls(envir = .GlobalEnv)[sapply(ls(envir = .GlobalEnv), function(obj) {
         tryCatch({
@@ -130,7 +130,7 @@ function() {
       # Convert to simple character vector
       as.character(plot_objects)
     }, error = function(e) {
-      c(paste("Error reading plot history:", e$message))
+      character(0)  # Return empty vector on error
     })
     
     # Get error history as a simple list of strings
@@ -155,14 +155,14 @@ function() {
       c(paste("Error reading error history:", e$message))
     })
     
-    # Create the result list with explicit string conversion for single values
+    # Create the result list with clean character vectors
     result <- list(
       document_content = as.character(document_content),
       console_history = console_history,
       workspace_objects = workspace_objects,
       environment_info = environment_info,
-      custom_functions = if(length(custom_functions) == 1) as.character(custom_functions[1]) else custom_functions,
-      plot_history = if(length(plot_history) == 1) as.character(plot_history[1]) else plot_history,
+      custom_functions = custom_functions,  # Always a clean character vector
+      plot_history = plot_history,  # Always a clean character vector
       error_history = if(length(error_history) == 1) as.character(error_history[1]) else error_history,
       timestamp = as.character(Sys.time()),
       source = "rstudio_plumber_context"
