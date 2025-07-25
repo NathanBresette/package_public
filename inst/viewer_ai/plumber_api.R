@@ -1,3 +1,13 @@
+# Plumber API for RStudio integration
+# This provides local endpoints for the HTML interface to interact with RStudio
+
+library(plumber)
+library(rstudioapi)
+library(jsonlite)
+
+# Configure jsonlite to auto-unbox single values to prevent array wrapping
+options(jsonlite.auto_unbox = TRUE)
+
 #* @get /
 #* @serializer html
 function() {
@@ -11,6 +21,7 @@ function() {
 }
 
 #* @get /context
+#* @serializer json
 function() {
   tryCatch({
     # Get document content as a simple string
@@ -20,7 +31,7 @@ function() {
         ctx <- rstudioapi::getActiveDocumentContext()
         document_content <- paste(ctx$contents, collapse = "\n")
       }, error = function(e) {
-        document_content <- paste("Error getting document context:", e$message)
+        document_content <- ""
       })
     }
     
@@ -32,10 +43,10 @@ function() {
         # Convert to simple character vector, not list
         as.character(lines)
       } else {
-        c("Console History: Not available")
+        character(0)  # Return empty vector instead of error message
       }
     }, error = function(e) {
-      c("Console History: Error reading")
+      character(0)  # Return empty vector on error
     })
     
     # Get workspace objects as a named dictionary
@@ -68,10 +79,10 @@ function() {
         }
         obj_dict
       } else {
-        list()
+        list()  # Return empty list instead of error
       }
     }, error = function(e) {
-      list(error = paste("Error reading workspace objects:", e$message))
+      list()  # Return empty list on error
     })
     
     # Get environment information as a simple dictionary
@@ -91,7 +102,7 @@ function() {
           "No packages loaded"
         }
       }, error = function(e) {
-        paste("Error reading packages:", e$message)
+        "Error reading packages"
       })
       
       list(
@@ -101,7 +112,12 @@ function() {
         packages = loaded_packages
       )
     }, error = function(e) {
-      list(error = paste("Error reading environment info:", e$message))
+      list(
+        r_version = "Unknown",
+        platform = "Unknown", 
+        working_directory = "Unknown",
+        packages = "Unknown"
+      )
     })
     
     # Get custom functions as a clean character vector
@@ -147,27 +163,28 @@ function() {
         }
       }
       if (length(errors) == 0) {
-        c("No recent errors")
+        character(0)  # Return empty vector instead of error message
       } else {
         errors
       }
     }, error = function(e) {
-      c(paste("Error reading error history:", e$message))
+      character(0)  # Return empty vector on error
     })
     
-    # Create the result list with clean character vectors
+    # Create the result list with proper handling of single values
     result <- list(
-      document_content = as.character(document_content),
+      document_content = document_content,  # Already a string, no need for as.character()
       console_history = console_history,
       workspace_objects = workspace_objects,
       environment_info = environment_info,
       custom_functions = custom_functions,  # Always a clean character vector
       plot_history = plot_history,  # Always a clean character vector
-      error_history = if(length(error_history) == 1) as.character(error_history[1]) else error_history,
+      error_history = error_history,  # Always a clean character vector
       timestamp = as.character(Sys.time()),
       source = "rstudio_plumber_context"
     )
     
+    # Ensure single values are not wrapped in arrays by using jsonlite's auto_unbox
     result
     
   }, error = function(e) {
@@ -180,6 +197,7 @@ function() {
 }
 
 #* @post /insert_code
+#* @serializer json
 function(req) {
   code <- req$body$code
   tryCatch({
@@ -191,6 +209,7 @@ function(req) {
 }
 
 #* @get /health
+#* @serializer json
 function() {
   list(status = "healthy", service = "rstudio-plumber-api")
 }
