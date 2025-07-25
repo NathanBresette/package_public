@@ -780,7 +780,7 @@
                     throw new Error('Server did not return a streaming response. Content-Type: ' + contentType);
                 }
 
-                // Check if response body is readable
+                // Check if response body is readable and get reader
                 if (!response.body) {
                     throw new Error('Response body is not readable');
                 }
@@ -793,7 +793,12 @@
 
                 // Read the streaming response
                 console.log('Starting to read streaming response...');
-                const reader = response.body.getReader();
+                let reader;
+                try {
+                    reader = response.body.getReader();
+                } catch (e) {
+                    throw new Error('Failed to get response reader: ' + e.message);
+                }
                 const decoder = new TextDecoder();
 
                 try {
@@ -829,6 +834,10 @@
                                 try {
                                     const data = JSON.parse(line.slice(6));
                                     console.log('Parsed data:', data);
+                                    
+                                    if (data.error) {
+                                        throw new Error(data.chunk || 'Unknown error');
+                                    }
                                     
                                     if (data.chunk) {
                                         fullResponse += data.chunk;
