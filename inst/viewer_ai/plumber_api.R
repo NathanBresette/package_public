@@ -8,7 +8,8 @@ function(pr) {
       if (file.exists(html_file)) {
         res$setHeader("Content-Type", "text/html")
         res$setHeader("Cache-Control", "no-cache")
-        res$sendFile(html_file)
+        html_content <- paste(readLines(html_file), collapse = "\n")
+        res$body <- html_content
       } else {
         res$status <- 404
         res$body <- list(error = "HTML file not found")
