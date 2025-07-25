@@ -46,6 +46,9 @@ ai_addin_viewer <- function(port = NULL) {
   # Start plumber server in background
   plumber_api_file <- file.path(system.file("viewer_ai", package = "rstudioai"), "plumber_api.R")
   
+  cat("Plumber API file path is:", plumber_api_file, "\n")
+  cat("File exists:", file.exists(plumber_api_file), "\n")
+  
   if (file.exists(plumber_api_file)) {
     plumber_process <- callr::r_bg(function(api_file, server_port) {
       pr <- plumber::plumb(api_file)
