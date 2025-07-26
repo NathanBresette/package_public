@@ -439,6 +439,89 @@ class UserManagerPostgreSQL:
         except Exception as e:
             print(f"Error updating billing status: {e}")
             return False
+    
+    def get_all_users_summary(self) -> List[Dict]:
+        """Get summary of all users"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor(cursor_factory=RealDictCursor)
+                cursor.execute('''
+                    SELECT access_code, user_name, email, is_active, 
+                           total_requests, total_cost, total_tokens,
+                           daily_limit, monthly_budget, billing_status,
+                           created_at, last_activity
+                    FROM users
+                    ORDER BY created_at DESC
+                ''')
+                users = cursor.fetchall()
+                return [dict(user) for user in users]
+        except Exception as e:
+            print(f"Error getting users summary: {e}")
+            return []
+    
+    def get_user_by_email(self, email: str) -> Optional[UserProfile]:
+        """Get user profile by email"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor(cursor_factory=RealDictCursor)
+                cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+                user = cursor.fetchone()
+                
+                if user:
+                    return UserProfile(**dict(user))
+                return None
+        except Exception as e:
+            print(f"Error getting user by email: {e}")
+            return None
+    
+    def update_user_password(self, email: str, new_password: str) -> bool:
+        """Update user password"""
+        try:
+            password_hash = self.hash_password(new_password)
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users 
+                    SET password_hash = %s 
+                    WHERE email = %s
+                ''', (password_hash, email))
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error updating password: {e}")
+            return False
+    
+    def cancel_user_subscription(self, access_code: str) -> bool:
+        """Cancel user subscription"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users 
+                    SET billing_status = 'cancelled' 
+                    WHERE access_code = %s
+                ''', (access_code,))
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error cancelling subscription: {e}")
+            return False
+    
+    def renew_user_subscription(self, access_code: str) -> bool:
+        """Renew cancelled subscription"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users 
+                    SET billing_status = 'active' 
+                    WHERE access_code = %s AND billing_status = 'cancelled'
+                ''', (access_code,))
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error renewing subscription: {e}")
+            return False
 
 # Create global instance
 user_manager = UserManagerPostgreSQL() 
