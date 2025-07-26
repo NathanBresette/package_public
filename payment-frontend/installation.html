@@ -58,7 +58,18 @@
                 <div>
                     <h3 style="color: #667eea; margin-bottom: 25px; font-size: 1.5rem;">4 Simple Commands</h3>
                     <div style="text-align: center;">
-                        <img src="images/FourSimpleCommands.png" alt="R Installation Commands" style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                        <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6; text-align: left; display: inline-block; min-width: 500px;">
+                            <div style="color: #333; margin-bottom: 8px;">```{r}</div>
+                            <div style="color: #008000; margin-bottom: 8px;"># 1. Install devtools (if not already installed)</div>
+                            <div style="color: #333; margin-bottom: 8px;">install.packages(<span style="color: #008000;">"devtools"</span>)</div>
+                            <div style="color: #008000; margin-bottom: 8px;"># 2. Install RgentAI package</div>
+                            <div style="color: #333; margin-bottom: 8px;">devtools::install_github(<span style="color: #008000;">"NathanBresette/Rgent-AI"</span>, force = <span style="color: #0000ff;">TRUE</span>)</div>
+                            <div style="color: #008000; margin-bottom: 8px;"># 3. Load the library</div>
+                            <div style="color: #333; margin-bottom: 8px;"><span style="color: #0000ff;">library</span>(<span style="color: #008000;">rstudioai</span>)</div>
+                            <div style="color: #008000; margin-bottom: 8px;"># 4. Launch the AI assistant</div>
+                            <div style="color: #333; margin-bottom: 8px;">ai_addin_viewer()</div>
+                            <div style="color: #333;">```</div>
+                        </div>
                     </div>
                     <p style="color: #666; margin-top: 25px; font-size: 1.1rem; text-align: center;">
                         <strong>That's it!</strong> Your AI assistant is now built right into RStudio.
