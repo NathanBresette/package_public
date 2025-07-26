@@ -129,43 +129,35 @@ class UserManagerPostgreSQL:
     
     def validate_access(self, access_code: str) -> Tuple[bool, str]:
         """Validate user access and check limits"""
-        with self.lock:
-            try:
-                with self._get_connection() as conn:
-                    cursor = conn.cursor(cursor_factory=RealDictCursor)
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor(cursor_factory=RealDictCursor)
+                
+                # Simple check: just see if user exists and is active
+                cursor.execute('''
+                    SELECT access_code, user_name, is_active, billing_status 
+                    FROM users 
+                    WHERE access_code = %s
+                ''', (access_code,))
+                user = cursor.fetchone()
+                
+                if not user:
+                    return False, "Invalid access code"
+                
+                if not user['is_active']:
+                    return False, "User is inactive"
+                
+                # Update last activity
+                cursor.execute('''
+                    UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE access_code = %s
+                ''', (access_code,))
+                conn.commit()
+                
+                return True, "Access granted"
                     
-                    # Get user
-                    cursor.execute('''
-                        SELECT * FROM users WHERE access_code = %s AND is_active = TRUE
-                    ''', (access_code,))
-                    user = cursor.fetchone()
-                    
-                    if not user:
-                        return False, "Invalid or inactive access code"
-                    
-                    # Temporarily skip rate limit check for debugging
-                    # if not self._check_rate_limit(access_code):
-                    #     return False, "Rate limit exceeded"
-                    
-                    # Check daily limit
-                    if not self._check_daily_limit(access_code):
-                        return False, "Daily limit exceeded"
-                    
-                    # Check monthly budget
-                    if not self._check_monthly_budget(access_code):
-                        return False, "Monthly budget exceeded"
-                    
-                    # Update last activity
-                    cursor.execute('''
-                        UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE access_code = %s
-                    ''', (access_code,))
-                    conn.commit()
-                    
-                    return True, "Access granted"
-                    
-            except Exception as e:
-                print(f"Error validating access: {e}")
-                return False, "Database error"
+        except Exception as e:
+            print(f"Error validating access: {e}")
+            return False, f"Database error: {str(e)}"
     
     def _check_rate_limit(self, access_code: str) -> bool:
         """Check rate limiting (requests per minute)"""
