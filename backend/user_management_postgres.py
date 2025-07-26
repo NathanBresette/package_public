@@ -143,9 +143,9 @@ class UserManagerPostgreSQL:
                     if not user:
                         return False, "Invalid or inactive access code"
                     
-                    # Check rate limit
-                    if not self._check_rate_limit(access_code):
-                        return False, "Rate limit exceeded"
+                    # Temporarily skip rate limit check for debugging
+                    # if not self._check_rate_limit(access_code):
+                    #     return False, "Rate limit exceeded"
                     
                     # Check daily limit
                     if not self._check_daily_limit(access_code):
