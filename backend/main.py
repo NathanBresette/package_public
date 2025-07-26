@@ -456,8 +456,10 @@ async def validate_access(request: AccessCodeRequest):
     """Validate an access code"""
     is_valid, message = user_manager.validate_access(request.access_code)
     if is_valid:
-        user = user_manager.users.get(request.access_code)
-        return {"valid": True, "user": user.user_name if user else "Unknown"}
+        # Get user stats to return user information
+        user_stats = user_manager.get_user_stats(request.access_code)
+        user_name = user_stats.get('user_name', 'Unknown') if user_stats else 'Unknown'
+        return {"valid": True, "user": user_name}
     else:
         raise HTTPException(status_code=401, detail=message)
 
