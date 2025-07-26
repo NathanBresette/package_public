@@ -99,5 +99,36 @@ class MemoryOnlyContext:
             self.session_contexts.clear()
             print("Cleared all session data")
 
+    def retrieve_relevant_context(self, access_code: str, query: str, n_results: int = 5) -> List[Dict]:
+        """Retrieve relevant context - NO persistent data returned"""
+        with self.lock:
+            # Update last activity
+            if access_code in self.session_contexts:
+                self.session_contexts[access_code]['last_activity'] = datetime.now()
+            
+            # Return empty list (no persistent context data)
+            return []
+    
+    def get_user_context_summary(self, access_code: str) -> Dict:
+        """Get user context summary - NO persistent data"""
+        with self.lock:
+            if access_code not in self.session_contexts:
+                return {
+                    'access_code': access_code,
+                    'context_count': 0,
+                    'context_types': [],
+                    'last_activity': None,
+                    'message': 'No persistent context data'
+                }
+            
+            session_data = self.session_contexts[access_code]
+            return {
+                'access_code': access_code,
+                'context_count': len(session_data['contexts']),
+                'context_types': [],
+                'last_activity': session_data['last_activity'].isoformat(),
+                'message': 'Memory-only context processing'
+            }
+
 # Global instance
 memory_context = MemoryOnlyContext() 

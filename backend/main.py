@@ -7,7 +7,7 @@ import httpx
 import os
 from typing import Optional, List, Dict, AsyncGenerator
 import json
-from sqlite_rag import SQLiteRAG
+from memory_only_context import memory_context
 from context_summarizer import ContextSummarizer
 from response_cache import SmartResponseCache
 from conversation_memory import ConversationMemory
@@ -25,8 +25,7 @@ from email.mime.multipart import MIMEMultipart
 
 app = FastAPI(title="RStudio AI Backend", version="1.3.0")
 
-# Initialize SQLite RAG, context summarizer, response cache, and conversation memory
-sqlite_rag = SQLiteRAG()
+# Initialize memory-only context, context summarizer, response cache, and conversation memory
 context_summarizer = ContextSummarizer()
 response_cache = SmartResponseCache(max_cache_size=200, cache_ttl_hours=4)  # Conservative settings for memory
 conversation_memory = ConversationMemory()
@@ -499,7 +498,7 @@ async def chat_with_ai(request: ChatRequest):
                 return ChatResponse(
                     response=cached_response['response'],
                     retrieved_context=[],
-                    context_summary={"cached_response": True, "cache_age_hours": cached_response['cache_age']}
+                    context_summary={"cached_response": True, "cache_age": cached_response['cache_age']}
                 )
         
         # Create context summary for storage and processing
@@ -508,18 +507,17 @@ async def chat_with_ai(request: ChatRequest):
             context_summary = context_summarizer.summarize_context(request.context_data)
             
             # Store summarized context instead of full context
-            context_id = sqlite_rag.store_context(
-                request.access_code, 
-                context_summary,  # Store summary instead of full context
-                request.context_type
-            )
+            # context_id = sqlite_rag.store_context(
+            #     request.access_code, 
+            #     context_summary,  # Store summary instead of full context
+            #     request.context_type
+            # )
         
-        # Retrieve relevant context from vector database (reduced from 3 to 2)
-        retrieved_contexts = sqlite_rag.retrieve_relevant_context(
-            request.access_code, 
-            request.prompt, 
-            n_results=2  # Reduced from 3 to save memory
-        )
+        # Retrieve relevant context from memory-only processing (no persistent data)
+        retrieved_contexts = memory_context.get_session_contexts(request.access_code)
+        
+        # Get context summary for response
+        context_summary_response = memory_context.get_user_context_summary(request.access_code)
         
         # Build enhanced prompt with summarized context
         enhanced_prompt = request.prompt
@@ -604,7 +602,7 @@ async def chat_with_ai(request: ChatRequest):
         })
         
         # Get context summary for response
-        context_summary_response = sqlite_rag.get_user_context_summary(request.access_code)
+        # context_summary_response = sqlite_rag.get_user_context_summary(request.access_code)
         
         # Force garbage collection after processing
         gc.collect()
@@ -657,18 +655,14 @@ async def chat_with_ai_stream(request: ChatRequest):
                 context_summary = context_summarizer.summarize_context(request.context_data)
                 
                 # Store summarized context instead of full context
-                context_id = sqlite_rag.store_context(
-                    request.access_code, 
-                    context_summary,  # Store summary instead of full context
-                    request.context_type
-                )
+                # context_id = sqlite_rag.store_context(
+                #     request.access_code, 
+                #     context_summary,  # Store summary instead of full context
+                #     request.context_type
+                # )
             
-            # Retrieve relevant context from vector database (reduced from 3 to 2)
-            retrieved_contexts = sqlite_rag.retrieve_relevant_context(
-                request.access_code, 
-                request.prompt, 
-                n_results=2  # Reduced from 3 to save memory
-            )
+            # Retrieve relevant context from memory-only processing (no persistent data)
+            retrieved_contexts = memory_context.get_session_contexts(request.access_code)
             
             # Build enhanced prompt with summarized context
             enhanced_prompt = request.prompt
@@ -841,11 +835,11 @@ async def memory_status():
         }
         
         # Get vector database stats
-        try:
-            db_stats = sqlite_rag.get_database_stats()
-            total_contexts = db_stats.get("total_contexts", "Error getting count")
-        except:
-            total_contexts = "Error getting count"
+        # try:
+        #     db_stats = sqlite_rag.get_database_stats()
+        #     total_contexts = db_stats.get("total_contexts", "Error getting count")
+        # except:
+        #     total_contexts = "Error getting count"
         
         # Get cache stats
         cache_stats = response_cache.get_cache_stats()
@@ -853,13 +847,13 @@ async def memory_status():
         return {
             "system_memory": memory_info,
             "process_memory": process_info,
-            "sqlite_db_stats": db_stats if 'db_stats' in locals() else {"error": "Could not get database stats"},
+            # "sqlite_db_stats": db_stats if 'db_stats' in locals() else {"error": "Could not get database stats"},
             "cache_stats": cache_stats,
-            "memory_limits": {
-                "max_contexts_per_user": sqlite_rag.max_contexts_per_user,
-                "max_total_contexts": sqlite_rag.max_total_contexts,
-                "max_context_age_days": sqlite_rag.max_context_age_days
-            }
+            # "memory_limits": {
+            #     "max_contexts_per_user": sqlite_rag.max_contexts_per_user,
+            #     "max_total_contexts": sqlite_rag.max_total_contexts,
+            #     "max_context_age_days": sqlite_rag.max_context_age_days
+            # }
         }
     except Exception as e:
         return {"error": str(e)}
@@ -872,7 +866,7 @@ async def cleanup_memory():
         collected = gc.collect()
         
         # Clean up old SQLite database data
-        sqlite_rag._cleanup_old_data()
+        # sqlite_rag._cleanup_old_data()
         
         # Get memory status after cleanup
         memory = psutil.virtual_memory()
@@ -907,87 +901,83 @@ async def get_user_usage(access_code: str):
 
 @app.post("/context/store", response_model=ContextResponse)
 async def store_context(request: ContextRequest):
-    """Store context data in vector database"""
-    if not validate_access_code(request.access_code):
-        raise HTTPException(status_code=401, detail="Invalid access code")
-    
+    """Store context data using memory-only processing - NO persistent storage"""
     try:
-        context_id = sqlite_rag.store_context(
+        # Process context in memory only - NO persistent storage
+        context_hash = memory_context.process_context(
             request.access_code,
             request.context_data,
             request.context_type
         )
         
-        if context_id:
+        if context_hash:
             return ContextResponse(
                 success=True,
-                message="Context stored successfully",
-                context_id=context_id
+                message="Context processed in memory (no persistent storage)",
+                context_id=context_hash
             )
         else:
             return ContextResponse(
                 success=False,
-                message="Failed to store context"
+                message="Failed to process context"
             )
     except Exception as e:
         return ContextResponse(
             success=False,
-            message=f"Error storing context: {str(e)}"
+            message=f"Context processing error: {str(e)}"
         )
 
 @app.get("/context/summary/{access_code}")
 async def get_context_summary(access_code: str):
-    """Get context summary for a user"""
+    """Get user context summary using memory-only processing"""
     if not validate_access_code(access_code):
         raise HTTPException(status_code=401, detail="Invalid access code")
     
     try:
-        summary = sqlite_rag.get_user_context_summary(access_code)
+        summary = memory_context.get_user_context_summary(access_code)
         return summary
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/context/clear/{access_code}")
 async def clear_user_context(access_code: str):
-    """Clear all context for a user"""
+    """Clear user context using memory-only processing"""
     if not validate_access_code(access_code):
         raise HTTPException(status_code=401, detail="Invalid access code")
     
     try:
-        success = sqlite_rag.clear_user_context(access_code)
-        if success:
-            return {"success": True, "message": "Context cleared successfully"}
-        else:
-            return {"success": False, "message": "Failed to clear context"}
+        memory_context.clear_session(access_code)
+        return {"success": True, "message": "Context cleared from memory"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/context/analytics/{access_code}")
 async def get_user_analytics(access_code: str):
-    """Get detailed analytics for a user's context"""
+    """Get user context analytics using memory-only processing"""
     if not validate_access_code(access_code):
         raise HTTPException(status_code=401, detail="Invalid access code")
     
     try:
-        analytics = sqlite_rag.get_user_context_analytics(access_code)
+        analytics = memory_context.get_session_stats(access_code)
         return analytics
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/context/search/{access_code}")
 async def search_user_context(access_code: str, q: str, context_type: str = None):
-    """Search user's context"""
+    """Search user context using memory-only processing"""
     if not validate_access_code(access_code):
         raise HTTPException(status_code=401, detail="Invalid access code")
     
     try:
-        results = sqlite_rag.search_user_context(access_code, q, context_type)
+        # For memory-only context, return session info instead of search results
+        session_stats = memory_context.get_session_stats(access_code)
         return {
             "access_code": access_code,
             "search_term": q,
             "context_type_filter": context_type,
-            "results": results,
-            "total_results": len(results)
+            "message": "Memory-only context processing - no persistent search available",
+            "session_stats": session_stats
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1431,7 +1421,7 @@ async def create_account(request: CreateAccountRequest):
             daily_limit = 500
             monthly_budget = 10.0
         
-        # Create user with Stripe customer ID - NO PII stored locally
+        # Create user with Stripe customer ID - NO PII stored
         success = user_manager.create_user(
             access_code=access_code,
             stripe_customer_id=customer.id,
