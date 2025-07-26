@@ -6,6 +6,8 @@ Handles user access, cost tracking, monitoring, and revocation
 import os
 import json
 import time
+import random
+import string
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
@@ -383,6 +385,16 @@ class UserManager:
         
         self.save_data()
         return True
+    
+    def generate_access_code(self) -> str:
+        """Generate a unique access code for new users"""
+        while True:
+            # Generate a 6-character alphanumeric code
+            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            
+            # Check if code already exists
+            if code not in self.users:
+                return code
     
     def get_usage_analytics(self, access_code: str = None, days: int = 30) -> Dict:
         """Get usage analytics for monitoring"""
