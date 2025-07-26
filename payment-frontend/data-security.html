@@ -179,44 +179,12 @@
             transform: translateY(-2px);
         }
         
-        /* Navigation styles to match other pages */
-        .navbar { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 24px 40px 16px 40px; 
-            background: rgba(255,255,255,0.95); 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
-            position: sticky; 
-            top: 0; 
-            z-index: 10; 
-        }
-        .navbar .logo { 
-            font-size: 1.7rem; 
-            font-weight: 700; 
-            color: #667eea; 
-            letter-spacing: 1px; 
-        }
-        .navbar nav a { 
-            margin-left: 32px; 
-            color: #333; 
-            text-decoration: none; 
-            font-weight: 500; 
-            transition: color 0.2s; 
-        }
-        .navbar nav a:hover { 
-            color: #764ba2; 
-        }
-        @media (max-width: 700px) { 
-            .navbar { 
-                flex-direction: column; 
-                align-items: flex-start; 
-                padding: 18px 12px; 
-            } 
-            .navbar nav a { 
-                margin-left: 18px; 
-            } 
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 24px 40px 16px 40px; background: rgba(255,255,255,0.95); box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 10; }
+        .navbar .logo { font-size: 1.7rem; font-weight: 700; color: #667eea; letter-spacing: 1px; }
+        .navbar nav a { margin-left: 32px; color: #333; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+        .navbar nav a:hover { color: #764ba2; }
+        @media (max-width: 700px) { .navbar { flex-direction: column; align-items: flex-start; padding: 18px 12px; } .navbar nav a { margin-left: 18px; } }
     </style>
 </head>
 <body>
