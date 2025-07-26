@@ -18,7 +18,7 @@
         .header h1 { font-size: 3rem; margin-bottom: 10px; font-weight: 700; }
         .header p { font-size: 1.2rem; opacity: 0.9; }
         .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 50px; }
-        .pricing-card { background: white; border-radius: 20px; padding: 40px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.1); transition: transform 0.3s ease, box-shadow 0.3s ease; position: relative; overflow: hidden; }
+        .pricing-card { background: white; border-radius: 20px; padding: 40px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.1); transition: transform 0.3s ease, box-shadow 0.3s ease; position: relative; overflow: hidden; display: flex; flex-direction: column; }
         .pricing-card:hover { transform: translateY(-10px); box-shadow: 0 30px 60px rgba(0,0,0,0.15); }
         .pricing-card.featured { border: 3px solid #667eea; transform: scale(1.05); }
         .pricing-card.featured::before { content: "Most Popular"; position: absolute; top: 20px; right: -30px; background: #667eea; color: white; padding: 8px 40px; transform: rotate(45deg); font-size: 0.8rem; font-weight: bold; }
@@ -27,7 +27,7 @@
         .plan-name { font-size: 1.5rem; font-weight: 600; margin-bottom: 10px; color: #333; }
         .plan-price { font-size: 2.2rem; font-weight: 700; color: #667eea; margin-bottom: 5px; }
         .plan-period { color: #666; margin-bottom: 30px; }
-        .plan-features { list-style: none; margin-bottom: 30px; }
+        .plan-features { list-style: none; margin-bottom: 30px; flex-grow: 1; }
         .plan-features li { padding: 10px 0; border-bottom: 1px solid #eee; }
         .plan-features li:last-child { border-bottom: none; }
         .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 40px; border-radius: 50px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-decoration: none; display: inline-block; }
@@ -95,7 +95,7 @@
                     <li>Perfect for simple tasks & high volume</li>
                     <li>$0.0013 per 1,000 input tokens</li>
                     <li>$0.0065 per 1,000 output tokens</li>
-                    <li>Approximately 1,500 prompts to hit $10 in tokens</li>
+                    <li>Approximately 1,500 prompts for $10 in tokens</li>
                 </ul>
                 <button class="btn" onclick="purchasePlan('pro_haiku')">Subscribe</button>
             </div>
@@ -109,7 +109,7 @@
                     <li>Perfect for complex analysis</li>
                     <li>$0.005 per 1,000 input tokens</li>
                     <li>$0.02 per 1,000 output tokens</li>
-                    <li>Approximately 400 prompts to hit $10 in tokens</li>
+                    <li>Approximately 400 prompts for $10 in tokens</li>
                 </ul>
                 <button class="btn" onclick="purchasePlan('pro_sonnet')">Subscribe</button>
             </div>
