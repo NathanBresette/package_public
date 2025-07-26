@@ -71,6 +71,47 @@ class UserManagerPostgreSQL:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
+                # Check if users table exists and has the right schema
+                cursor.execute('''
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables
+                        WHERE table_name = 'users'
+                    )
+                ''')
+                table_exists = cursor.fetchone()[0]
+                
+                if table_exists:
+                    # Check if stripe_customer_id column exists
+                    cursor.execute('''
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.columns
+                            WHERE table_name = 'users' AND column_name = 'stripe_customer_id'
+                        )
+                    ''')
+                    column_exists = cursor.fetchone()[0]
+                    
+                    if not column_exists:
+                        print("🔄 Migrating database schema to PII-free version...")
+                        # Add stripe_customer_id column
+                        cursor.execute('''
+                            ALTER TABLE users 
+                            ADD COLUMN stripe_customer_id VARCHAR(255) UNIQUE
+                        ''')
+                        
+                        # Remove PII columns if they exist
+                        for column in ['email', 'password_hash', 'user_name']:
+                            cursor.execute('''
+                                SELECT EXISTS (
+                                    SELECT FROM information_schema.columns
+                                    WHERE table_name = 'users' AND column_name = %s
+                                )
+                            ''', (column,))
+                            if cursor.fetchone()[0]:
+                                cursor.execute(f'ALTER TABLE users DROP COLUMN {column}')
+                                print(f"🗑️ Removed PII column: {column}")
+                        
+                        print("✅ Database migration completed!")
+                
                 # Create users table - NO PII stored
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users (

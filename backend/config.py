@@ -13,7 +13,7 @@ def get_user_manager():
     if not database_url:
         raise ValueError("DATABASE_URL environment variable is required for PostgreSQL user management")
     
-    return UserManagerPostgreSQL(database_url)
+    return UserManagerPostgreSQL()
 
 # Environment variable configuration
 USE_POSTGRESQL = True  # Always True for PII-free system
