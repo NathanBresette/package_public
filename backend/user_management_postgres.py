@@ -131,7 +131,7 @@ class UserManagerPostgreSQL:
         """Validate user access and check limits"""
         try:
             with self._get_connection() as conn:
-                cursor = conn.cursor(cursor_factory=RealDictCursor)
+                cursor = conn.cursor()
                 
                 # Simple check: just see if user exists and is active
                 cursor.execute('''
@@ -144,7 +144,8 @@ class UserManagerPostgreSQL:
                 if not user:
                     return False, "Invalid access code"
                 
-                if not user['is_active']:
+                # user is a tuple: (access_code, user_name, is_active, billing_status)
+                if not user[2]:  # is_active is at index 2
                     return False, "User is inactive"
                 
                 # Update last activity
