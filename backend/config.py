@@ -1,33 +1,24 @@
 """
 Configuration for RStudio AI Backend
-Switch between SQLite and PostgreSQL easily
+Centralized settings and user manager selection
 """
 
 import os
-
-# Database configuration
-USE_POSTGRESQL = os.getenv('USE_POSTGRESQL', 'false').lower() == 'true'
-DATABASE_URL = os.getenv('DATABASE_URL')
-
-# AI API configuration
-CLAUDE_API_KEY = os.getenv('CLAUDE_API_KEY')
-CLAUDE_API_KEY_HAIKU = os.getenv('CLAUDE_API_KEY_HAIKU', CLAUDE_API_KEY)
-
-# Stripe configuration
-STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
-STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')
-
-# Backend configuration
-BACKEND_VERSION = "1.4.0"
-DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
+from user_management_postgres import UserManagerPostgreSQL
 
 def get_user_manager():
-    """Get the appropriate user manager based on configuration"""
-    if USE_POSTGRESQL and DATABASE_URL:
-        print("🚀 Using PostgreSQL for user management")
-        from user_management_postgres import user_manager
-        return user_manager
-    else:
-        print("🚀 Using SQLite for user management")
-        from user_management_sqlite import user_manager
-        return user_manager 
+    """Get the appropriate user manager - PostgreSQL only for PII-free system"""
+    # Always use PostgreSQL for PII-free user management
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable is required for PostgreSQL user management")
+    
+    return UserManagerPostgreSQL(database_url)
+
+# Environment variable configuration
+USE_POSTGRESQL = True  # Always True for PII-free system
+DATABASE_URL = os.getenv("DATABASE_URL")
+CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+ADMIN_ACCESS_CODE = os.getenv("ADMIN_ACCESS_CODE", "admin123") 
