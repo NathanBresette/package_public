@@ -12,7 +12,8 @@ from context_summarizer import ContextSummarizer
 from response_cache import SmartResponseCache
 from conversation_memory import ConversationMemory
 # from security_config import get_cors_config, ADMIN_ACCESS_CODE, get_security_headers
-from user_management_sqlite import user_manager
+from config import get_user_manager
+user_manager = get_user_manager()
 import psutil
 import gc
 from datetime import datetime
