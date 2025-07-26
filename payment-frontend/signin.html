@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RgentAI - Sign In</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 24px 40px 16px 40px; background: rgba(255,255,255,0.95); box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 10; }
+        .navbar .logo { font-size: 1.7rem; font-weight: 700; color: #667eea; letter-spacing: 1px; }
+        .navbar nav a { margin-left: 32px; color: #333; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+        .navbar nav a:hover { color: #764ba2; }
+        .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+        .signin-card { background: white; border-radius: 20px; padding: 50px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        .signin-card h1 { font-size: 2.5rem; color: #667eea; margin-bottom: 20px; font-weight: 700; }
+        .signin-card p { font-size: 1.2rem; color: #666; margin-bottom: 40px; line-height: 1.6; }
+        .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 40px; border-radius: 50px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-decoration: none; display: inline-block; margin: 10px; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+        .btn.secondary { background: white; color: #667eea; border: 2px solid #667eea; }
+        .btn.secondary:hover { background: #667eea; color: white; }
+        .footer { text-align: center; color: #fff; opacity: 0.85; margin-top: 60px; padding: 32px 0 16px 0; font-size: 1rem; }
+        @media (max-width: 700px) { .navbar { flex-direction: column; align-items: flex-start; padding: 18px 12px; } .navbar nav a { margin-left: 18px; } .signin-card { padding: 30px 20px; } }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">RgentAI</div>
+        <nav>
+            <a href="homepage.html">Home</a>
+            <a href="plans.html">Plans & Pricing</a>
+            <a href="updates.html">Dev Updates</a>
+            <a href="signin.html">Sign In</a>
+        </nav>
+    </div>
+    
+    <div class="container">
+        <div class="signin-card">
+            <h1>Welcome to RgentAI</h1>
+            <p>Already a user or looking to get started?</p>
+            
+            <div style="margin-bottom: 30px;">
+                <button class="btn" onclick="window.location.href='dashboard.html'">I'm Already a User - Sign In</button>
+            </div>
+            
+            <div>
+                <button class="btn secondary" onclick="window.location.href='plans.html'">I'm New - Show Me Plans</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        &copy; 2025 RgentAI. All rights reserved.<br>
+        <a href="mailto:nathanbresette04@gmail.com" style="color:#fff;text-decoration:underline;">Contact Us</a> | 
+        <a href="mailto:nathanbresette04@gmail.com" style="color:#fff;text-decoration:underline;">nathanbresette04@gmail.com</a>
+    </div>
+</body>
+</html> 

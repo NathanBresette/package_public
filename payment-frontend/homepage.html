@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RgentAI - RStudio AI Assistant</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 24px 40px 16px 40px; background: rgba(255,255,255,0.95); box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 10; }
+        .navbar .logo { font-size: 1.7rem; font-weight: 700; color: #667eea; letter-spacing: 1px; }
+        .navbar nav a { margin-left: 32px; color: #333; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+        .navbar nav a:hover { color: #764ba2; }
+        .hero { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; padding: 60px 20px 40px 20px; }
+        .hero h1 { font-size: 3rem; color: #fff; margin-bottom: 20px; font-weight: 800; text-shadow: 0 2px 16px rgba(102,126,234,0.2); }
+        .hero p { font-size: 1.3rem; color: #f3f3f3; margin-bottom: 36px; max-width: 600px; }
+        .cta-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; padding: 18px 48px; border-radius: 50px; font-size: 1.2rem; font-weight: 700; cursor: pointer; box-shadow: 0 8px 24px rgba(102,126,234,0.15); transition: background 0.2s, transform 0.2s; text-decoration: none; }
+        .cta-btn:hover { background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); transform: translateY(-2px) scale(1.03); }
+        .features-section { background: #fff; border-radius: 24px; margin: 40px auto 0 auto; max-width: 1100px; padding: 48px 24px; box-shadow: 0 8px 32px rgba(102,126,234,0.08); }
+        .features-title { text-align: center; font-size: 2rem; color: #667eea; font-weight: 700; margin-bottom: 36px; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px; }
+        .feature { text-align: center; padding: 16px; }
+        .feature-icon { font-size: 2.5rem; margin-bottom: 16px; color: #667eea; }
+        .feature-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 8px; color: #333; }
+        .feature-desc { color: #666; font-size: 1rem; }
+        .media-section { margin: 60px auto 0 auto; max-width: 900px; text-align: center; }
+        .media-title { font-size: 1.5rem; color: #764ba2; font-weight: 600; margin-bottom: 18px; }
+        .media-placeholder { background: #f3f3f3; border: 2px dashed #667eea; border-radius: 16px; height: 260px; display: flex; align-items: center; justify-content: center; color: #667eea; font-size: 1.2rem; margin-bottom: 18px; }
+        .footer { text-align: center; color: #fff; opacity: 0.85; margin-top: 60px; padding: 32px 0 16px 0; font-size: 1rem; }
+        @media (max-width: 700px) { .navbar { flex-direction: column; align-items: flex-start; padding: 18px 12px; } .navbar nav a { margin-left: 18px; } .hero h1 { font-size: 2rem; } .features-section { padding: 24px 6px; } }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">RgentAI</div>
+        <nav>
+            <a href="homepage.html">Home</a>
+            <a href="plans.html">Plans & Pricing</a>
+            <a href="updates.html">Dev Updates</a>
+            <a href="signin.html">Sign In</a>
+        </nav>
+    </div>
+    <section class="hero">
+        <h1>Supercharge RStudio with AI</h1>
+        <p>The all-in-one AI assistant for RStudio. Get instant code help, debugging, and data science insights—right inside your IDE. Choose between Claude 3.5 Haiku for speed or Sonnet for power. Privacy-first, blazing-fast AI.</p>
+        <a class="cta-btn" href="plans.html">See Plans & Pricing</a>
+    </section>
+    <section class="features-section">
+        <div class="features-title">Why Choose RgentAI?</div>
+        <div class="features-grid">
+            <div class="feature">
+                <div class="feature-icon">🤖</div>
+                <div class="feature-title">AI-Powered R Help</div>
+                <div class="feature-desc">Get context-aware code suggestions, explanations, and bug fixes for your R projects.</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔒</div>
+                <div class="feature-title">Privacy-First</div>
+                <div class="feature-desc">Your code and data are never used for training. Secure, confidential, and compliant. (We still don't recommend sharing sensitive data with any AI.)</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">RStudio-Specific</div>
+                <div class="feature-desc">Built specifically for RStudio users with R, Python, Rmd, Qmd, and Shiny compatibility.</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🧑‍💻</div>
+                <div class="feature-title">Easy Integration</div>
+                <div class="feature-desc">Easy as 1, 2, 3:<br>
+                1. Get access code<br>
+                2. Download package/library in R<br>
+                3. Use our AI assistant</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Showcase Section -->
+    <section class="features-section" style="margin-top: 40px;">
+        <h2 style="text-align: center; margin-bottom: 40px; color: #333;">Powerful Features</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
+            <!-- Features List -->
+            <div>
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #667eea; margin-bottom: 8px;">🔍 Context-Aware Assistance</h3>
+                    <p style="color: #666;">Understands your entire R project, including variables, functions, and data structures for intelligent suggestions.</p>
+                </div>
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #667eea; margin-bottom: 8px;">📚 RAG Integration</h3>
+                    <p style="color: #666;">Retrieval-Augmented Generation uses your project files and documentation for more accurate responses. Helps save tokens while still getting the best context.</p>
+                </div>
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #667eea; margin-bottom: 8px;">🛡️ Enterprise Security</h3>
+                    <p style="color: #666;">Advanced encryption, secure API endpoints, and comprehensive privacy controls for sensitive data.</p>
+                </div>
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #667eea; margin-bottom: 8px;">⚡ Multi-Model Support</h3>
+                    <p style="color: #666;">Choose between Claude 3.5 Haiku for speed or Sonnet for complex reasoning and advanced coding tasks.</p>
+                </div>
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #667eea; margin-bottom: 8px;">📄 File Compatibility</h3>
+                    <p style="color: #666;">Full support for R, Python, R Markdown, Quarto, and Shiny applications with intelligent parsing.</p>
+                </div>
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #667eea; margin-bottom: 8px;">💬 Real-Time Chat</h3>
+                    <p style="color: #666;">Interactive conversation with your AI assistant for debugging, code review, and learning.</p>
+                </div>
+            </div>
+            <!-- Image Placeholder -->
+            <div style="text-align: center;">
+                <div style="background: #f3f3f3; border: 2px dashed #667eea; border-radius: 16px; height: 400px; display: flex; align-items: center; justify-content: center; color: #667eea; font-size: 1.2rem;">
+                    <div>
+                        <div style="font-size: 3rem; margin-bottom: 15px;">🖥️</div>
+                        <div>RgentAI in RStudio Viewer Tab</div>
+                        <div style="font-size: 0.9rem; margin-top: 10px; opacity: 0.7;">Screenshot coming soon</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="media-section">
+        <div class="media-title" style="color: #333; font-weight: 600;">See RgentAI in Action</div>
+        <div class="media-placeholder">[ Video or Screenshot Gallery Coming Soon ]</div>
+    </section>
+    <div class="footer">
+        &copy; 2025 RgentAI. All rights reserved.<br>
+        <a href="mailto:nathanbresette04@gmail.com" style="color:#fff;text-decoration:underline;">Contact Us</a> | 
+        <a href="mailto:nathanbresette04@gmail.com" style="color:#fff;text-decoration:underline;">nathanbresette04@gmail.com</a>
+    </div>
+</body>
+</html> 
