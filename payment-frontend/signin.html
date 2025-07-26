@@ -38,8 +38,27 @@
             <h1>Welcome to RgentAI</h1>
             <p>Already a user or looking to get started?</p>
             
-            <div style="margin-bottom: 30px;">
-                <button class="btn" onclick="window.location.href='dashboard.html'">I'm Already a User - Sign In</button>
+            <div id="signin-form" style="margin-bottom: 30px;">
+                <div style="margin-bottom: 20px;">
+                    <input type="email" id="email" placeholder="Enter your email" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 10px;">
+                    <input type="password" id="password" placeholder="Enter your password" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 15px;">
+                    <button class="btn" onclick="signIn()" style="width: 100%;">Sign In</button>
+                </div>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 15px;">
+                    Don't have an account? <a href="#" onclick="showCreateAccount()" style="color: #667eea;">Create one with your access code</a>
+                </p>
+            </div>
+            
+            <div id="create-account-form" style="display: none; margin-bottom: 30px;">
+                <div style="margin-bottom: 20px;">
+                    <input type="email" id="new-email" placeholder="Enter your email" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 10px;">
+                    <input type="password" id="new-password" placeholder="Create a password" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 10px;">
+                    <input type="text" id="access-code" placeholder="Enter your access code" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 15px;">
+                    <button class="btn" onclick="createAccount()" style="width: 100%;">Create Account</button>
+                </div>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 15px;">
+                    Already have an account? <a href="#" onclick="showSignIn()" style="color: #667eea;">Sign in</a>
+                </p>
             </div>
             
             <div>
@@ -47,6 +66,83 @@
             </div>
         </div>
     </div>
+
+    <script>
+        const BACKEND_URL = 'https://rgent.onrender.com';
+        
+        async function signIn() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                alert('Please enter both email and password');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/signin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store user data
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    // Redirect to dashboard
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert('Sign-in failed: ' + (data.detail || 'Invalid credentials'));
+                }
+            } catch (error) {
+                alert('Sign-in failed. Please try again.');
+                console.error('Sign-in error:', error);
+            }
+        }
+        
+        async function createAccount() {
+            const email = document.getElementById('new-email').value;
+            const password = document.getElementById('new-password').value;
+            const accessCode = document.getElementById('access-code').value;
+            
+            if (!email || !password || !accessCode) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/create-account`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, access_code: accessCode })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Account created successfully! You can now sign in.');
+                    showSignIn();
+                } else {
+                    alert('Account creation failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Account creation failed. Please try again.');
+                console.error('Create account error:', error);
+            }
+        }
+        
+        function showCreateAccount() {
+            document.getElementById('signin-form').style.display = 'none';
+            document.getElementById('create-account-form').style.display = 'block';
+        }
+        
+        function showSignIn() {
+            document.getElementById('signin-form').style.display = 'block';
+            document.getElementById('create-account-form').style.display = 'none';
+        }
+    </script>
 
     <div class="footer">
         &copy; 2025 RgentAI. All rights reserved.<br>

@@ -19,6 +19,7 @@ class UserProfile:
     access_code: str
     user_name: str
     email: str = ""
+    password_hash: str = ""  # For web dashboard login
     is_active: bool = True
     is_admin: bool = False
     created_at: str = ""
@@ -395,6 +396,63 @@ class UserManager:
             # Check if code already exists
             if code not in self.users:
                 return code
+    
+    def hash_password(self, password: str) -> str:
+        """Hash a password for secure storage"""
+        return hashlib.sha256(password.encode()).hexdigest()
+    
+    def verify_password(self, password: str, password_hash: str) -> bool:
+        """Verify a password against its hash"""
+        return self.hash_password(password) == password_hash
+    
+    def create_user_account(self, email: str, password: str, access_code: str, 
+                           user_name: str = "", daily_limit: int = 100, 
+                           monthly_budget: float = 10.0) -> bool:
+        """Create a new user account with email/password for web dashboard"""
+        # Check if email already exists
+        for user in self.users.values():
+            if user.email == email:
+                return False
+        
+        # Check if access code already exists
+        if access_code in self.users:
+            return False
+        
+        # Create user with password hash
+        user = UserProfile(
+            access_code=access_code,
+            user_name=user_name or email.split('@')[0],
+            email=email,
+            password_hash=self.hash_password(password),
+            created_at=datetime.now().isoformat(),
+            daily_limit=daily_limit,
+            monthly_budget=monthly_budget
+        )
+        
+        self.users[access_code] = user
+        self.save_data()
+        return True
+    
+    def authenticate_user(self, email: str, password: str) -> Optional[Dict]:
+        """Authenticate user with email and password"""
+        for user in self.users.values():
+            if user.email == email and self.verify_password(password, user.password_hash):
+                return {
+                    'access_code': user.access_code,
+                    'user_name': user.user_name,
+                    'email': user.email,
+                    'daily_limit': user.daily_limit,
+                    'monthly_budget': user.monthly_budget,
+                    'is_active': user.is_active
+                }
+        return None
+    
+    def get_user_by_email(self, email: str) -> Optional[UserProfile]:
+        """Get user profile by email"""
+        for user in self.users.values():
+            if user.email == email:
+                return user
+        return None
     
     def get_usage_analytics(self, access_code: str = None, days: int = 30) -> Dict:
         """Get usage analytics for monitoring"""

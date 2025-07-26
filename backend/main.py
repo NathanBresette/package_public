@@ -98,6 +98,15 @@ class PaymentSuccessRequest(BaseModel):
     customer_email: str
     plan_type: str
 
+class SignInRequest(BaseModel):
+    email: str
+    password: str
+
+class CreateAccountRequest(BaseModel):
+    email: str
+    password: str
+    access_code: str
+
 # Configuration
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
@@ -1331,6 +1340,51 @@ async def create_stripe_checkout(request: LookupKeyRequest):
     except Exception as e:
         print(f"Error creating Stripe checkout session: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Payment setup failed: {str(e)}")
+
+@app.post("/api/signin")
+async def signin(request: SignInRequest):
+    """Sign in with email and password"""
+    try:
+        user_data = user_manager.authenticate_user(request.email, request.password)
+        
+        if user_data:
+            if not user_data['is_active']:
+                raise HTTPException(status_code=403, detail="Account is disabled")
+            
+            return {
+                "success": True,
+                "user": user_data
+            }
+        else:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+            
+    except Exception as e:
+        print(f"Sign-in error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Sign-in failed")
+
+@app.post("/api/create-account")
+async def create_account(request: CreateAccountRequest):
+    """Create a new user account with email/password"""
+    try:
+        # Validate access code exists
+        if request.access_code not in user_manager.users:
+            raise HTTPException(status_code=400, detail="Invalid access code")
+        
+        # Create account
+        success = user_manager.create_user_account(
+            email=request.email,
+            password=request.password,
+            access_code=request.access_code
+        )
+        
+        if success:
+            return {"success": True, "message": "Account created successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Email already exists or invalid access code")
+            
+    except Exception as e:
+        print(f"Create account error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Account creation failed")
 
 @app.post("/api/webhook")
 async def stripe_webhook(request: Request):

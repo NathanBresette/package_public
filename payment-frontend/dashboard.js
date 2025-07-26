@@ -7,85 +7,51 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
-// Load user data from session or API
-async function loadUserData() {
-    const sessionId = localStorage.getItem('paymentSessionId');
+// Load user data from localStorage
+function loadUserData() {
+    const userDataString = localStorage.getItem('user');
     
-    if (!sessionId) {
-        // No session found, redirect to pricing
-        window.location.href = '/index.html';
+    if (!userDataString) {
+        // No user data found, redirect to signin
+        window.location.href = 'signin.html';
         return;
     }
 
     try {
-        // In a real app, you'd fetch user data from your backend
-        // For now, we'll simulate the data
-        userData = await fetchUserData(sessionId);
+        userData = JSON.parse(userDataString);
         updateDashboard(userData);
     } catch (error) {
-        console.error('Error loading user data:', error);
-        showError('Failed to load user data. Please try again.');
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('user');
+        window.location.href = 'signin.html';
     }
-}
-
-// Simulate fetching user data from backend
-async function fetchUserData(sessionId) {
-    // In production, this would be a real API call
-    // For now, return mock data
-    return {
-        accessCode: generateAccessCode(),
-        plan: {
-            name: 'Professional',
-            type: 'professional',
-            requests: 500,
-            price: 29
-        },
-        usage: {
-            used: 0,
-            remaining: 500,
-            daysLeft: 30
-        },
-        user: {
-            email: 'user@example.com',
-            name: 'John Doe'
-        }
-    };
-}
-
-// Generate a random access code
-function generateAccessCode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = 'RGENT-';
-    
-    for (let i = 0; i < 3; i++) {
-        for (let j = 0; j < 4; j++) {
-            code += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        if (i < 2) code += '-';
-    }
-    
-    return code;
 }
 
 // Update dashboard with user data
 function updateDashboard(data) {
     // Update access code
-    document.getElementById('accessCode').textContent = data.accessCode;
+    document.getElementById('accessCode').textContent = data.access_code;
+    
+    // Update user info
+    document.getElementById('userName').textContent = data.user_name;
+    document.getElementById('userEmail').textContent = data.email;
     
     // Update plan info
-    document.getElementById('planName').textContent = data.plan.name + ' Plan';
+    const planType = data.monthly_budget >= 10 ? 'Pro' : 'Free Trial';
+    document.getElementById('planName').textContent = planType + ' Plan';
     document.getElementById('planDetails').textContent = 
-        data.plan.requests === -1 ? 'Unlimited requests per month' : 
-        `${data.plan.requests} requests per month`;
+        `${data.daily_limit} requests per day`;
     
-    // Update usage stats
-    document.getElementById('requestsUsed').textContent = data.usage.used;
-    document.getElementById('requestsRemaining').textContent = data.usage.remaining;
-    document.getElementById('daysLeft').textContent = data.usage.daysLeft;
+    // Update usage stats (mock for now - would come from backend)
+    const requestsUsed = Math.floor(Math.random() * 50); // Mock data
+    const requestsRemaining = Math.max(0, data.daily_limit - requestsUsed);
+    
+    document.getElementById('requestsUsed').textContent = requestsUsed;
+    document.getElementById('requestsRemaining').textContent = requestsRemaining;
+    document.getElementById('daysLeft').textContent = '30'; // Mock data
     
     // Update progress bar
-    const progressPercent = data.plan.requests === -1 ? 0 : 
-        ((data.usage.used / data.plan.requests) * 100);
+    const progressPercent = (requestsUsed / data.daily_limit) * 100;
     document.getElementById('progressFill').style.width = `${Math.min(progressPercent, 100)}%`;
     
     // Update progress bar color based on usage
@@ -122,6 +88,12 @@ async function copyAccessCode() {
         console.error('Failed to copy:', error);
         showError('Failed to copy access code. Please copy it manually.');
     }
+}
+
+// Sign out function
+function signOut() {
+    localStorage.removeItem('user');
+    window.location.href = 'signin.html';
 }
 
 // Account management functions
@@ -236,22 +208,4 @@ style.textContent = `
         }
     }
 `;
-document.head.appendChild(style);
-
-// Analytics tracking
-function trackEvent(eventName, properties = {}) {
-    // Add your analytics tracking here
-    console.log('Dashboard event:', eventName, properties);
-}
-
-// Track dashboard interactions
-trackEvent('dashboard_loaded', {
-    timestamp: new Date().toISOString()
-});
-
-// Track copy access code
-const originalCopyAccessCode = copyAccessCode;
-copyAccessCode = function() {
-    trackEvent('access_code_copied');
-    return originalCopyAccessCode.apply(this, arguments);
-}; 
+document.head.appendChild(style); 
