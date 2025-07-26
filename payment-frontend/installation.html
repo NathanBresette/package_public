@@ -58,7 +58,8 @@
                 <div>
                     <h3 style="color: #667eea; margin-bottom: 25px; font-size: 1.5rem;">4 Simple Commands</h3>
                     <div style="text-align: center;">
-                        <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6; text-align: left; display: inline-block; min-width: 500px;">
+                        <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace; font-size: 15px; line-height: 1.7; text-align: left; display: inline-block; min-width: 500px; position: relative;">
+                            <button onclick="copyCode()" style="position: absolute; top: 10px; right: 10px; background: #667eea; color: white; border: none; border-radius: 6px; padding: 8px 12px; font-size: 12px; cursor: pointer; font-family: inherit; transition: background 0.2s;">Copy</button>
                             <div style="color: #333; margin-bottom: 8px;">```{r}</div>
                             <div style="color: #008000; margin-bottom: 8px;"># 1. Install devtools (if not already installed)</div>
                             <div style="color: #333; margin-bottom: 8px;">install.packages(<span style="color: #008000;">"devtools"</span>)</div>
@@ -169,6 +170,35 @@
     </div>
 
     <script>
+        function copyCode() {
+            const codeText = `# 1. Install devtools (if not already installed)
+install.packages("devtools")
+
+# 2. Install RgentAI package
+devtools::install_github("NathanBresette/Rgent-AI", force = TRUE)
+
+# 3. Load the library
+library(rstudioai)
+
+# 4. Launch the AI assistant
+ai_addin_viewer()`;
+            
+            navigator.clipboard.writeText(codeText).then(function() {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.style.background = '#28a745';
+                
+                setTimeout(function() {
+                    button.textContent = originalText;
+                    button.style.background = '#667eea';
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy code. Please select and copy manually.');
+            });
+        }
+        
         function showContactForm() {
             document.getElementById('contactModal').style.display = 'block';
         }
