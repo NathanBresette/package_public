@@ -49,7 +49,7 @@
         <div class="contact-section" style="margin-bottom: 30px; background-color: #2563eb; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); color: #fff;">
             <h2 style="color: #fff;">Have Feature Ideas?</h2>
             <p>We're always looking to improve RgentAI. If you have any recommended features or suggestions, we'd love to hear from you!</p>
-            <button class="btn" onclick="window.open('mailto:nathanbresette04@gmail.com?subject=RgentAI Feature Request&body=Hi Nathan,%0D%0A%0D%0AI have a feature request for RgentAI:%0D%0A%0D%0AFeature description:%0D%0AWhy this would be helpful:%0D%0A%0D%0AThanks!')">Contact Us</button>
+            <button class="btn" onclick="contactUs()">Contact Us</button>
         </div>
 
         <div class="features-section">
@@ -88,5 +88,48 @@
         <a href="mailto:nathanbresette04@gmail.com" style="color:#fff;text-decoration:underline;">Contact Us</a> | 
         <a href="mailto:nathanbresette04@gmail.com" style="color:#fff;text-decoration:underline;">nathanbresette04@gmail.com</a>
     </div>
+    
+    <script>
+        function contactUs() {
+            const email = 'nathanbresette04@gmail.com';
+            const subject = 'RgentAI Feature Request';
+            const body = `Hi Nathan,
+
+I have a feature request for RgentAI:
+
+Feature description:
+Why this would be helpful:
+
+Thanks!`;
+            
+            // Try multiple methods for better compatibility
+            const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            // Method 1: Try window.open
+            try {
+                window.open(mailtoLink, '_blank');
+            } catch (e) {
+                // Method 2: Try window.location
+                try {
+                    window.location.href = mailtoLink;
+                } catch (e2) {
+                    // Method 3: Create a temporary link and click it
+                    const link = document.createElement('a');
+                    link.href = mailtoLink;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+            
+            // Fallback: Show email info if nothing works
+            setTimeout(() => {
+                if (!window.mailtoOpened) {
+                    alert(`If your email client didn't open, please email: ${email}\n\nSubject: ${subject}`);
+                }
+            }, 1000);
+        }
+    </script>
 </body>
 </html> 
