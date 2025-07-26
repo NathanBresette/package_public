@@ -34,15 +34,27 @@
         
         .security-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 40px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
             margin: 40px 0;
+        }
+        
+        @media (max-width: 1200px) {
+            .security-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .security-grid {
+                grid-template-columns: 1fr;
+            }
         }
         
         .security-card {
             background: white;
             border-radius: 12px;
-            padding: 30px;
+            padding: 20px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             border-left: 4px solid #667eea;
         }
