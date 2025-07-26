@@ -205,6 +205,19 @@ class UserManagerPostgreSQL:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
+                # First check if usage_records table exists
+                cursor.execute('''
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_name = 'usage_records'
+                    )
+                ''')
+                table_exists = cursor.fetchone()[0]
+                
+                if not table_exists:
+                    # If table doesn't exist, allow the request
+                    return True
+                
                 # Count today's requests
                 cursor.execute('''
                     SELECT COUNT(*) FROM usage_records 
@@ -219,7 +232,8 @@ class UserManagerPostgreSQL:
                 daily_limit = result[0] if result else 100
                 
                 return today_requests < daily_limit
-        except:
+        except Exception as e:
+            print(f"Error in _check_daily_limit: {e}")
             return True  # Allow if database error
     
     def _check_monthly_budget(self, access_code: str) -> bool:
@@ -227,6 +241,19 @@ class UserManagerPostgreSQL:
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
+                
+                # First check if usage_records table exists
+                cursor.execute('''
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_name = 'usage_records'
+                    )
+                ''')
+                table_exists = cursor.fetchone()[0]
+                
+                if not table_exists:
+                    # If table doesn't exist, allow the request
+                    return True
                 
                 # Sum this month's costs
                 cursor.execute('''
@@ -242,7 +269,8 @@ class UserManagerPostgreSQL:
                 monthly_budget = result[0] if result else 10.0
                 
                 return month_cost < monthly_budget
-        except:
+        except Exception as e:
+            print(f"Error in _check_monthly_budget: {e}")
             return True  # Allow if database error
     
     def record_usage(self, access_code: str, usage_info: Dict) -> bool:
