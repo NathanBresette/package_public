@@ -441,9 +441,10 @@ class UserManagerSQLite:
             return False
     
     def generate_access_code(self) -> str:
-        """Generate a unique 6-character access code"""
+        """Generate a unique 16-character alphanumeric access code"""
         while True:
-            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            # Use both uppercase and lowercase letters + digits for more randomness
+            code = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
             
             with self._get_connection() as conn:
                 cursor = conn.cursor()
