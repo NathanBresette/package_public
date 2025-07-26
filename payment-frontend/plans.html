@@ -120,7 +120,7 @@
             <div style="text-align: center;">
                 <h2 style="color: #333; margin-bottom: 15px;">Enterprise</h2>
                 <p style="color: #666; font-size: 1.1rem; margin-bottom: 25px;">Need RgentAI for your organization? Contact us for custom pricing and features.</p>
-                <button class="btn" onclick="contactUs()">Contact Us</button>
+                <button class="btn" onclick="showContactForm()">Contact Us</button>
             </div>
         </div>
 
@@ -137,48 +137,101 @@
         </div>
     </div>
 
+    <!-- Contact Modal -->
+    <div id="contactModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div style="background-color: white; margin: 5% auto; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px; position: relative;">
+            <span onclick="closeContactForm()" style="position: absolute; right: 20px; top: 15px; font-size: 28px; font-weight: bold; cursor: pointer; color: #999;">&times;</span>
+            <h2 style="color: #333; margin-bottom: 20px;">Contact Us</h2>
+            <form id="contactForm" onsubmit="submitContactForm(event)">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">Your Email:</label>
+                    <input type="email" id="userEmail" required style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">Organization:</label>
+                    <input type="text" id="organization" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">Number of Users:</label>
+                    <input type="number" id="userCount" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">Specific Needs:</label>
+                    <textarea id="specificNeeds" rows="4" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Send Message</button>
+            </form>
+            <div id="contactStatus" style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none;"></div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
     <script>
-        function contactUs() {
-            const email = 'nathanbresette04@gmail.com';
-            const subject = 'RgentAI Enterprise Inquiry';
-            const body = `Hi Nathan,
-
-I'm interested in RgentAI for my organization.
-
-Organization:
-Number of users:
-Specific needs:
-
-Thanks!`;
+        function showContactForm() {
+            document.getElementById('contactModal').style.display = 'block';
+        }
+        
+        function closeContactForm() {
+            document.getElementById('contactModal').style.display = 'none';
+            document.getElementById('contactStatus').style.display = 'none';
+            document.getElementById('contactForm').reset();
+        }
+        
+        async function submitContactForm(event) {
+            event.preventDefault();
             
-            // Try multiple methods for better compatibility
-            const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            const userEmail = document.getElementById('userEmail').value;
+            const organization = document.getElementById('organization').value;
+            const userCount = document.getElementById('userCount').value;
+            const specificNeeds = document.getElementById('specificNeeds').value;
             
-            // Method 1: Try window.open
+            const statusDiv = document.getElementById('contactStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.style.backgroundColor = '#e8f5e8';
+            statusDiv.style.color = '#2d5a2d';
+            statusDiv.innerHTML = 'Sending message...';
+            
             try {
-                window.open(mailtoLink, '_blank');
-            } catch (e) {
-                // Method 2: Try window.location
-                try {
-                    window.location.href = mailtoLink;
-                } catch (e2) {
-                    // Method 3: Create a temporary link and click it
-                    const link = document.createElement('a');
-                    link.href = mailtoLink;
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
+                // Use a free email service API (Formspree, EmailJS, or similar)
+                // For now, we'll use a simple approach that works for everyone
+                const emailBody = `New RgentAI Enterprise Inquiry:
+
+From: ${userEmail}
+Organization: ${organization}
+Number of Users: ${userCount}
+Specific Needs: ${specificNeeds}
+
+This message was sent from the RgentAI website.`;
+
+                // Create a mailto link with the form data
+                const mailtoLink = `mailto:nathanbresette04@gmail.com?subject=RgentAI Enterprise Inquiry from ${userEmail}&body=${encodeURIComponent(emailBody)}`;
+                
+                // Try to open email client
+                window.open(mailtoLink);
+                
+                // Show success message
+                statusDiv.style.backgroundColor = '#d4edda';
+                statusDiv.style.color = '#155724';
+                statusDiv.innerHTML = '✅ Message prepared! Your email client should open. If it doesn\'t, please email nathanbresette04@gmail.com directly.';
+                
+                // Close form after 3 seconds
+                setTimeout(() => {
+                    closeContactForm();
+                }, 3000);
+                
+            } catch (error) {
+                statusDiv.style.backgroundColor = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.innerHTML = '❌ Error sending message. Please email nathanbresette04@gmail.com directly.';
             }
-            
-            // Fallback: Show email info if nothing works
-            setTimeout(() => {
-                if (!window.mailtoOpened) {
-                    alert(`If your email client didn't open, please email: ${email}\n\nSubject: ${subject}`);
-                }
-            }, 1000);
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('contactModal');
+            if (event.target === modal) {
+                closeContactForm();
+            }
         }
     </script>
 </body>
