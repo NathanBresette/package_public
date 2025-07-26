@@ -522,6 +522,35 @@ class UserManagerPostgreSQL:
         except Exception as e:
             print(f"Error renewing subscription: {e}")
             return False
+    
+    def create_user(self, access_code: str, user_name: str, email: str = "", 
+                   daily_limit: int = 100, monthly_budget: float = 10.0) -> bool:
+        """Create a new user"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Check if access code already exists
+                cursor.execute('SELECT 1 FROM users WHERE access_code = %s', (access_code,))
+                if cursor.fetchone():
+                    return False
+                
+                # Create user
+                cursor.execute('''
+                    INSERT INTO users (
+                        access_code, user_name, email, daily_limit, monthly_budget,
+                        is_active, billing_status
+                    ) VALUES (%s, %s, %s, %s, %s, TRUE, 'active')
+                ''', (
+                    access_code, user_name, email, daily_limit, monthly_budget
+                ))
+                
+                conn.commit()
+                return True
+                
+        except Exception as e:
+            print(f"Error creating user: {e}")
+            return False
 
 # Create global instance
 user_manager = UserManagerPostgreSQL() 
