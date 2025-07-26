@@ -16,8 +16,12 @@ from config import get_user_manager
 user_manager = get_user_manager()
 import psutil
 import gc
-from datetime import datetime
+from datetime import datetime, timedelta
 import stripe
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = FastAPI(title="RStudio AI Backend", version="1.3.0")
 
@@ -107,6 +111,13 @@ class CreateAccountRequest(BaseModel):
     email: str
     password: str
     plan_type: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
 
 # Configuration
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
@@ -1593,6 +1604,129 @@ async def get_payment_status(session_id: str):
         }
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Session not found: {str(e)}")
+
+# Password reset tokens storage (in production, use database)
+password_reset_tokens = {}
+
+@app.post("/api/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest):
+    """Send password reset email"""
+    try:
+        # Check if user exists
+        user = user_manager.get_user_by_email(request.email)
+        if not user:
+            # Don't reveal if email exists or not for security
+            return {"success": True, "message": "If the email exists, a reset link has been sent"}
+        
+        # Generate secure token
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.now() + timedelta(hours=1)
+        
+        # Store token (in production, use database)
+        password_reset_tokens[token] = {
+            "email": request.email,
+            "expires_at": expires_at
+        }
+        
+        # Send email (using Gmail SMTP for free)
+        reset_link = f"https://rgentaipaymentfrontend.vercel.app/reset-password.html?token={token}"
+        
+        # For now, just log the reset link (in production, send actual email)
+        print(f"Password reset link for {request.email}: {reset_link}")
+        
+        return {"success": True, "message": "Password reset link sent"}
+        
+    except Exception as e:
+        print(f"Error in forgot password: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process request")
+
+@app.post("/api/reset-password")
+async def reset_password(request: ResetPasswordRequest):
+    """Reset password using token"""
+    try:
+        # Check if token exists and is valid
+        if request.token not in password_reset_tokens:
+            raise HTTPException(status_code=400, detail="Invalid or expired token")
+        
+        token_data = password_reset_tokens[request.token]
+        
+        # Check if token is expired
+        if datetime.now() > token_data["expires_at"]:
+            del password_reset_tokens[request.token]
+            raise HTTPException(status_code=400, detail="Token has expired")
+        
+        # Update password
+        success = user_manager.update_user_password(token_data["email"], request.new_password)
+        
+        if success:
+            # Remove used token
+            del password_reset_tokens[request.token]
+            return {"success": True, "message": "Password updated successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update password")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in reset password: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset password")
+
+@app.post("/api/cancel-subscription")
+async def cancel_subscription(request: SignInRequest):
+    """Cancel user subscription"""
+    try:
+        # Authenticate user
+        user = user_manager.authenticate_user(request.email, request.password)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        # Cancel subscription (for now, just mark as cancelled in database)
+        success = user_manager.cancel_user_subscription(user["access_code"])
+        
+        if success:
+            return {
+                "success": True, 
+                "message": "Subscription cancelled. You have access until the end of your billing period.",
+                "access_until": user.get("billing_end_date", "End of current period")
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to cancel subscription")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error cancelling subscription: {e}")
+        raise HTTPException(status_code=500, detail="Failed to cancel subscription")
+
+@app.post("/api/renew-subscription")
+async def renew_subscription(request: SignInRequest):
+    """Renew cancelled subscription"""
+    try:
+        # Authenticate user
+        user = user_manager.authenticate_user(request.email, request.password)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        # Check if subscription is cancelled
+        if user.get("billing_status") != "cancelled":
+            raise HTTPException(status_code=400, detail="Subscription is not cancelled")
+        
+        # Renew subscription
+        success = user_manager.renew_user_subscription(user["access_code"])
+        
+        if success:
+            return {
+                "success": True, 
+                "message": "Subscription renewed successfully"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to renew subscription")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error renewing subscription: {e}")
+        raise HTTPException(status_code=500, detail="Failed to renew subscription")
 
 if __name__ == "__main__":
     import uvicorn

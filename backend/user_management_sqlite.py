@@ -618,5 +618,51 @@ class UserManagerSQLite:
             print(f"Error getting usage analytics: {e}")
             return {'daily_data': [], 'total_requests': 0, 'total_cost': 0, 'total_tokens': 0}
 
+    def update_user_password(self, email: str, new_password: str) -> bool:
+        """Update user password"""
+        try:
+            password_hash = self.hash_password(new_password)
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users 
+                    SET password_hash = ? 
+                    WHERE email = ?
+                ''', (password_hash, email))
+                return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error updating password: {e}")
+            return False
+
+    def cancel_user_subscription(self, access_code: str) -> bool:
+        """Cancel user subscription"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users 
+                    SET billing_status = 'cancelled' 
+                    WHERE access_code = ?
+                ''', (access_code,))
+                return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error cancelling subscription: {e}")
+            return False
+
+    def renew_user_subscription(self, access_code: str) -> bool:
+        """Renew cancelled subscription"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users 
+                    SET billing_status = 'active' 
+                    WHERE access_code = ? AND billing_status = 'cancelled'
+                ''', (access_code,))
+                return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error renewing subscription: {e}")
+            return False
+
 # Create global instance
 user_manager = UserManagerSQLite() 
