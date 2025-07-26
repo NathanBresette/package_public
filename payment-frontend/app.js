@@ -4,81 +4,10 @@ const stripe = Stripe('pk_test_51Rp76V075QJxEpaQKmYsfObmwGt7i3SKY9FYv5cR5uZpF3Cf
 // Backend API URL
 const BACKEND_URL = 'https://rgent.onrender.com';
 
-// Purchase plan function
+// Purchase plan function - redirect to signin
 async function purchasePlan(planType) {
-    // Show loading state
-    showLoading(true);
-    hideMessages();
-
-    try {
-        // Handle free plan differently (no Stripe needed)
-        if (planType === 'free') {
-            const response = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    plan_type: 'free',
-                    plan_name: 'Free Trial',
-                    price: 0,
-                    requests: 50
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (data.access_code) {
-                showSuccess(`Free plan activated! Your access code: ${data.access_code}`);
-                // Store access code for later use
-                localStorage.setItem('accessCode', data.access_code);
-                // Redirect to dashboard
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html?code=' + data.access_code;
-                }, 3000);
-            } else {
-                throw new Error('Failed to generate access code');
-            }
-            return;
-        }
-
-        // For Pro plans, use lookup keys with new endpoint
-        const lookupKey = planType === 'pro_haiku' ? 'pro_haiku_monthly_base' : 'pro_sonnet_monthly_base';
-        
-        const response = await fetch(`${BACKEND_URL}/api/create-stripe-checkout`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                lookup_key: lookupKey
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const session = await response.json();
-
-        // Redirect to Stripe Checkout for paid plans
-        const result = await stripe.redirectToCheckout({
-            sessionId: session.id
-        });
-
-        if (result.error) {
-            throw new Error(result.error.message);
-        }
-
-    } catch (error) {
-        console.error('Error:', error);
-        showError(`Payment failed: ${error.message}`);
-        showLoading(false);
-    }
+    // Redirect to signin page with plan type
+    window.location.href = `signin.html?plan=${planType}`;
 }
 
 // Helper function to get plan name

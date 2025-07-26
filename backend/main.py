@@ -105,7 +105,7 @@ class SignInRequest(BaseModel):
 class CreateAccountRequest(BaseModel):
     email: str
     password: str
-    access_code: str
+    plan_type: str
 
 # Configuration
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
@@ -1364,23 +1364,44 @@ async def signin(request: SignInRequest):
 
 @app.post("/api/create-account")
 async def create_account(request: CreateAccountRequest):
-    """Create a new user account with email/password"""
+    """Create a new user account with email/password and generate access code"""
     try:
-        # Validate access code exists
-        if request.access_code not in user_manager.users:
-            raise HTTPException(status_code=400, detail="Invalid access code")
+        # Generate access code
+        access_code = user_manager.generate_access_code()
+        
+        # Determine plan settings
+        if request.plan_type == 'free':
+            daily_limit = 50
+            monthly_budget = 0.0
+        elif request.plan_type == 'pro_haiku':
+            daily_limit = 1000
+            monthly_budget = 10.0
+        elif request.plan_type == 'pro_sonnet':
+            daily_limit = 1000
+            monthly_budget = 10.0
+        else:
+            daily_limit = 100
+            monthly_budget = 5.0
         
         # Create account
         success = user_manager.create_user_account(
             email=request.email,
             password=request.password,
-            access_code=request.access_code
+            access_code=access_code,
+            daily_limit=daily_limit,
+            monthly_budget=monthly_budget
         )
         
         if success:
-            return {"success": True, "message": "Account created successfully"}
+            # Return user data for immediate sign-in
+            user_data = user_manager.authenticate_user(request.email, request.password)
+            return {
+                "success": True, 
+                "message": "Account created successfully",
+                "user": user_data
+            }
         else:
-            raise HTTPException(status_code=400, detail="Email already exists or invalid access code")
+            raise HTTPException(status_code=400, detail="Email already exists")
             
     except Exception as e:
         print(f"Create account error: {str(e)}")
