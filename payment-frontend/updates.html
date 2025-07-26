@@ -94,18 +94,18 @@
         <div style="background-color: white; margin: 5% auto; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px; position: relative;">
             <span onclick="closeContactForm()" style="position: absolute; right: 20px; top: 15px; font-size: 28px; font-weight: bold; cursor: pointer; color: #999;">&times;</span>
             <h2 style="color: #333; margin-bottom: 20px;">Feature Request</h2>
-            <form id="contactForm" onsubmit="submitContactForm(event)">
+            <form id="contactForm" action="https://formspree.io/f/xpzgwqjq" method="POST" onsubmit="submitContactForm(event)">
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">Your Email:</label>
-                    <input type="email" id="userEmail" required style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem;">
+                    <input type="email" name="email" required style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem;">
                 </div>
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">Feature Description:</label>
-                    <textarea id="featureDescription" rows="3" required style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+                    <textarea name="featureDescription" rows="3" required style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
                 </div>
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">Why This Would Be Helpful:</label>
-                    <textarea id="whyHelpful" rows="3" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+                    <textarea name="whyHelpful" rows="3" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
                 </div>
                 <button type="submit" class="btn" style="width: 100%;">Send Feature Request</button>
             </form>
@@ -127,10 +127,6 @@
         async function submitContactForm(event) {
             event.preventDefault();
             
-            const userEmail = document.getElementById('userEmail').value;
-            const featureDescription = document.getElementById('featureDescription').value;
-            const whyHelpful = document.getElementById('whyHelpful').value;
-            
             const statusDiv = document.getElementById('contactStatus');
             statusDiv.style.display = 'block';
             statusDiv.style.backgroundColor = '#e8f5e8';
@@ -138,31 +134,33 @@
             statusDiv.innerHTML = 'Sending feature request...';
             
             try {
-                const emailBody = `New RgentAI Feature Request:
-
-From: ${userEmail}
-Feature Description: ${featureDescription}
-Why This Would Be Helpful: ${whyHelpful}
-
-This message was sent from the RgentAI website.`;
-
-                // Create a mailto link with the form data
-                const mailtoLink = `mailto:nathanbresette04@gmail.com?subject=RgentAI Feature Request from ${userEmail}&body=${encodeURIComponent(emailBody)}`;
+                const formData = new FormData(event.target);
+                const response = await fetch(event.target.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
                 
-                // Try to open email client
-                window.open(mailtoLink);
-                
-                // Show success message
-                statusDiv.style.backgroundColor = '#d4edda';
-                statusDiv.style.color = '#155724';
-                statusDiv.innerHTML = '✅ Feature request prepared! Your email client should open. If it doesn\'t, please email nathanbresette04@gmail.com directly.';
-                
-                // Close form after 3 seconds
-                setTimeout(() => {
-                    closeContactForm();
-                }, 3000);
+                if (response.ok) {
+                    statusDiv.style.backgroundColor = '#d4edda';
+                    statusDiv.style.color = '#155724';
+                    statusDiv.innerHTML = '✅ Feature request sent successfully! We\'ll get back to you soon.';
+                    
+                    // Reset form
+                    event.target.reset();
+                    
+                    // Close form after 3 seconds
+                    setTimeout(() => {
+                        closeContactForm();
+                    }, 3000);
+                } else {
+                    throw new Error('Failed to send email');
+                }
                 
             } catch (error) {
+                console.error('Email error:', error);
                 statusDiv.style.backgroundColor = '#f8d7da';
                 statusDiv.style.color = '#721c24';
                 statusDiv.innerHTML = '❌ Error sending message. Please email nathanbresette04@gmail.com directly.';
