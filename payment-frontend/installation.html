@@ -17,10 +17,10 @@
         .features-section { background: white; border-radius: 20px; padding: 50px; margin-bottom: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
         .installation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
         .code-block { font-family: 'Courier New', monospace; background: #2d3748; color: #e2e8f0; padding: 25px; border-radius: 15px; line-height: 1.6; font-size: 1rem; }
-        .code-block .comment { color: #81c784; }
-        .code-block .function { color: #64b5f6; }
-        .code-block .string { color: #ffb74d; }
-        .code-block .boolean { color: #ffb74d; }
+        .code-block .comment { color: #6a8759; }
+        .code-block .function { color: #ffc66d; }
+        .code-block .string { color: #a5c261; }
+        .code-block .boolean { color: #cc7833; }
         .step-number { background: #667eea; color: white; border-radius: 50%; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; }
         .video-placeholder { background: #f3f3f3; border: 2px dashed #667eea; border-radius: 16px; height: 400px; display: flex; align-items: center; justify-content: center; color: #667eea; font-size: 1.2rem; }
         .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; padding: 15px 40px; border-radius: 50px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-decoration: none; display: inline-block; }
@@ -48,7 +48,7 @@
     <div class="container">
         <div class="header">
             <h1>Installation Guide</h1>
-            <p>Get RgentAI up and running in just 3 simple steps</p>
+            <p>Get RgentAI up and running in just 4 simple steps</p>
         </div>
 
         <div class="features-section">
@@ -56,18 +56,22 @@
             <div class="installation-grid">
                 <!-- Installation Steps -->
                 <div>
-                    <h3 style="color: #667eea; margin-bottom: 25px; font-size: 1.5rem;">3 Simple Commands</h3>
+                    <h3 style="color: #667eea; margin-bottom: 25px; font-size: 1.5rem;">4 Simple Commands</h3>
                     <div class="code-block">
                         <div style="margin-bottom: 20px;">
-                            <span class="comment"># 1. Install the package</span><br>
+                            <span class="comment"># 1. Install devtools (if not already installed)</span><br>
+                            <span class="function">install.packages</span>(<span class="string">"devtools"</span>)
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <span class="comment"># 2. Install RgentAI package</span><br>
                             <span class="function">devtools::install_github</span>(<span class="string">"NathanBresette/Rgent-AI"</span>, force = <span class="boolean">TRUE</span>)
                         </div>
                         <div style="margin-bottom: 20px;">
-                            <span class="comment"># 2. Load the library</span><br>
+                            <span class="comment"># 3. Load the library</span><br>
                             <span class="function">library</span>(<span class="string">rstudioai</span>)
                         </div>
                         <div>
-                            <span class="comment"># 3. Launch the AI assistant</span><br>
+                            <span class="comment"># 4. Launch the AI assistant</span><br>
                             <span class="function">ai_addin_viewer</span>()
                         </div>
                     </div>
@@ -117,7 +121,6 @@
             <div class="troubleshooting">
                 <h3>🔧 Troubleshooting</h3>
                 <ul>
-                    <li><strong>Package not found:</strong> Make sure you have devtools installed: <code>install.packages("devtools")</code></li>
                     <li><strong>GitHub access issues:</strong> Ensure your R session can access GitHub repositories</li>
                     <li><strong>Function not found:</strong> Make sure you've loaded the library with <code>library(rstudioai)</code></li>
                     <li><strong>Viewer tab not appearing:</strong> Check that RStudio is up to date and restart if needed</li>
