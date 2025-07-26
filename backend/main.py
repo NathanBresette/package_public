@@ -1357,73 +1357,112 @@ async def create_stripe_checkout(request: LookupKeyRequest):
 
 @app.post("/api/signin")
 async def signin(request: SignInRequest):
-    """Sign in with email and password"""
+    """Sign in using Stripe customer management - NO PII stored locally"""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
     try:
-        user_data = user_manager.authenticate_user(request.email, request.password)
+        # Find Stripe customer by email
+        customers = stripe.Customer.list(email=request.email, limit=1)
         
-        if user_data:
-            if not user_data['is_active']:
-                raise HTTPException(status_code=403, detail="Account is disabled")
-            
-            return {
-                "success": True,
-                "user": user_data
-            }
-        else:
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-            
+        if not customers.data:
+            raise HTTPException(status_code=401, detail="Account not found")
+        
+        customer = customers.data[0]
+        
+        # Find user by Stripe customer ID
+        user = user_manager.get_user_by_stripe_customer_id(customer.id)
+        
+        if not user:
+            raise HTTPException(status_code=401, detail="User account not found")
+        
+        if not user.is_active:
+            raise HTTPException(status_code=401, detail="Account is disabled")
+        
+        # Return user data (no password verification needed - Stripe handles authentication)
+        return {
+            "success": True,
+            "access_code": user.access_code,
+            "plan_type": customer.metadata.get('plan_type', 'pro'),
+            "stripe_customer_id": customer.id,
+            "billing_status": user.billing_status,
+            "message": "Sign in successful"
+        }
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        raise HTTPException(status_code=400, detail=f"Authentication error: {str(e)}")
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Sign-in error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Sign-in failed")
+        print(f"Sign in error: {e}")
+        raise HTTPException(status_code=500, detail="Sign in failed")
 
 @app.post("/api/create-account")
 async def create_account(request: CreateAccountRequest):
-    """Create a new user account with email/password and generate access code"""
+    """Create a new account with Stripe customer management - NO PII stored locally"""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
     try:
+        # Create Stripe customer for PII management
+        customer = stripe.Customer.create(
+            email=request.email,
+            metadata={
+                'plan_type': request.plan_type,
+                'created_at': datetime.now().isoformat()
+            }
+        )
+        
         # Generate access code
         access_code = user_manager.generate_access_code()
         
-        # Determine plan settings
+        # Determine plan limits
         if request.plan_type == 'free':
             daily_limit = 50
-            monthly_budget = 0.0
+            monthly_budget = 5.0
         elif request.plan_type == 'pro_haiku':
             daily_limit = 1000
             monthly_budget = 10.0
         elif request.plan_type == 'pro_sonnet':
             daily_limit = 1000
             monthly_budget = 10.0
-        else:
-            daily_limit = 100
-            monthly_budget = 5.0
+        else:  # pro
+            daily_limit = 500
+            monthly_budget = 10.0
         
-        # Create account
-        success = user_manager.create_user_account(
-            email=request.email,
-            password=request.password,
+        # Create user with Stripe customer ID - NO PII stored locally
+        success = user_manager.create_user(
             access_code=access_code,
+            stripe_customer_id=customer.id,
             daily_limit=daily_limit,
             monthly_budget=monthly_budget
         )
         
-        if success:
-            # Return user data for immediate sign-in
-            user_data = user_manager.authenticate_user(request.email, request.password)
-            return {
-                "success": True, 
-                "message": "Account created successfully",
-                "user": user_data
-            }
-        else:
-            raise HTTPException(status_code=400, detail="Email already exists")
-            
+        if not success:
+            # Clean up Stripe customer if user creation failed
+            stripe.Customer.delete(customer.id)
+            raise HTTPException(status_code=500, detail="Failed to create user account")
+        
+        # Return success with access code
+        return {
+            "success": True,
+            "access_code": access_code,
+            "plan_type": request.plan_type,
+            "stripe_customer_id": customer.id,
+            "message": "Account created successfully"
+        }
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        raise HTTPException(status_code=400, detail=f"Payment error: {str(e)}")
     except Exception as e:
-        print(f"Create account error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Account creation failed")
+        print(f"Account creation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Account creation failed: {str(e)}")
 
 @app.post("/api/webhook")
 async def stripe_webhook(request: Request):
-    """Handle Stripe webhook events"""
+    """Handle Stripe webhook events - PII-free user management"""
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=500, detail="Stripe not configured")
     
@@ -1449,6 +1488,7 @@ async def stripe_webhook(request: Request):
             subscription_id = invoice.get('subscription')
             if subscription_id:
                 subscription = stripe.Subscription.retrieve(subscription_id)
+                customer_id = subscription.customer
                 
                 # Generate access code for successful payment
                 access_code = user_manager.generate_access_code()
@@ -1475,20 +1515,19 @@ async def stripe_webhook(request: Request):
                     daily_limit = 500
                     monthly_budget = 10.0
                 
-                customer_email = subscription.metadata.get('customer_email', '')
-                if not customer_email and subscription.customer:
-                    customer = stripe.Customer.retrieve(subscription.customer)
-                    customer_email = customer.email
-                
-                user_manager.create_user(
+                # Create user with Stripe customer ID - NO PII stored
+                success = user_manager.create_user(
                     access_code=access_code,
-                    user_name=customer_email.split('@')[0] if customer_email else "Pro User",
-                    email=customer_email or "pro@example.com",
+                    stripe_customer_id=customer_id,
                     daily_limit=daily_limit,
                     monthly_budget=monthly_budget
                 )
                 
-                print(f"✅ Payment successful! Access code generated: {access_code} for plan: {plan_type}")
+                if success:
+                    print(f"✅ Payment successful! Access code generated: {access_code} for plan: {plan_type}")
+                    print(f"🔗 Linked to Stripe customer: {customer_id}")
+                else:
+                    print(f"❌ Failed to create user for customer: {customer_id}")
             
         elif event['type'] == 'payment_intent.succeeded':
             # Handle successful payment via payment intent
@@ -1498,6 +1537,7 @@ async def stripe_webhook(request: Request):
             if payment_intent.metadata.get('subscription_id'):
                 subscription_id = payment_intent.metadata.get('subscription_id')
                 subscription = stripe.Subscription.retrieve(subscription_id)
+                customer_id = subscription.customer
                 
                 # Generate access code for successful payment
                 access_code = user_manager.generate_access_code()
@@ -1522,24 +1562,24 @@ async def stripe_webhook(request: Request):
                     daily_limit = 500
                     monthly_budget = 10.0
                 
-                customer_email = subscription.metadata.get('customer_email', '')
-                if not customer_email and subscription.customer:
-                    customer = stripe.Customer.retrieve(subscription.customer)
-                    customer_email = customer.email
-                
-                user_manager.create_user(
+                # Create user with Stripe customer ID - NO PII stored
+                success = user_manager.create_user(
                     access_code=access_code,
-                    user_name=customer_email.split('@')[0] if customer_email else "Pro User",
-                    email=customer_email or "pro@example.com",
+                    stripe_customer_id=customer_id,
                     daily_limit=daily_limit,
                     monthly_budget=monthly_budget
                 )
                 
-                print(f"✅ Payment successful! Access code generated: {access_code} for plan: {plan_type}")
+                if success:
+                    print(f"✅ Payment successful! Access code generated: {access_code} for plan: {plan_type}")
+                    print(f"🔗 Linked to Stripe customer: {customer_id}")
+                else:
+                    print(f"❌ Failed to create user for customer: {customer_id}")
             
         elif event['type'] == 'checkout.session.completed':
             # Keep existing checkout.session.completed logic for backward compatibility
             session = event['data']['object']
+            customer_id = session.customer
             
             # Generate access code for successful payment
             access_code = user_manager.generate_access_code()
@@ -1567,23 +1607,46 @@ async def stripe_webhook(request: Request):
                 daily_limit = requests
                 monthly_budget = 10.0 if plan_type == 'pro' else 99.0
             
-            customer_email = session.metadata.get('customer_email', session.customer_details.email)
-            
-            user_manager.create_user(
+            # Create user with Stripe customer ID - NO PII stored
+            success = user_manager.create_user(
                 access_code=access_code,
-                user_name=customer_email.split('@')[0] if customer_email else "Pro User",
-                email=customer_email or "pro@example.com",
+                stripe_customer_id=customer_id,
                 daily_limit=daily_limit,
                 monthly_budget=monthly_budget
             )
             
-            print(f"✅ Payment successful! Access code generated: {access_code} for plan: {plan_type}")
+            if success:
+                print(f"✅ Payment successful! Access code generated: {access_code} for plan: {plan_type}")
+                print(f"🔗 Linked to Stripe customer: {customer_id}")
+            else:
+                print(f"❌ Failed to create user for customer: {customer_id}")
             
         elif event['type'] == 'customer.subscription.deleted':
             # Handle subscription cancellation
             subscription = event['data']['object']
-            # You can add logic here to disable user access
-            print(f"Subscription cancelled: {subscription.id}")
+            customer_id = subscription.customer
+            
+            # Find user by Stripe customer ID and update billing status
+            user = user_manager.get_user_by_stripe_customer_id(customer_id)
+            if user:
+                user_manager.update_user_billing_status(user.access_code, 'cancelled')
+                print(f"📋 Subscription cancelled for customer: {customer_id}")
+            else:
+                print(f"⚠️ No user found for cancelled subscription: {customer_id}")
+            
+        elif event['type'] == 'customer.subscription.updated':
+            # Handle subscription updates
+            subscription = event['data']['object']
+            customer_id = subscription.customer
+            
+            # Update user billing status based on subscription status
+            user = user_manager.get_user_by_stripe_customer_id(customer_id)
+            if user:
+                status = subscription.status
+                user_manager.update_user_billing_status(user.access_code, status)
+                print(f"📋 Subscription updated for customer: {customer_id} - Status: {status}")
+            else:
+                print(f"⚠️ No user found for updated subscription: {customer_id}")
             
         return {"status": "success"}
         
@@ -1607,127 +1670,117 @@ async def get_payment_status(session_id: str):
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Session not found: {str(e)}")
 
-# Password reset tokens storage (in production, use database)
-password_reset_tokens = {}
-
-@app.post("/api/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest):
-    """Send password reset email"""
-    try:
-        # Check if user exists
-        user = user_manager.get_user_by_email(request.email)
-        if not user:
-            # Don't reveal if email exists or not for security
-            return {"success": True, "message": "If the email exists, a reset link has been sent"}
-        
-        # Generate secure token
-        token = secrets.token_urlsafe(32)
-        expires_at = datetime.now() + timedelta(hours=1)
-        
-        # Store token (in production, use database)
-        password_reset_tokens[token] = {
-            "email": request.email,
-            "expires_at": expires_at
-        }
-        
-        # Send email (using Gmail SMTP for free)
-        reset_link = f"https://rgentaipaymentfrontend.vercel.app/reset-password.html?token={token}"
-        
-        # For now, just log the reset link (in production, send actual email)
-        print(f"Password reset link for {request.email}: {reset_link}")
-        
-        return {"success": True, "message": "Password reset link sent"}
-        
-    except Exception as e:
-        print(f"Error in forgot password: {e}")
-        raise HTTPException(status_code=500, detail="Failed to process request")
-
-@app.post("/api/reset-password")
-async def reset_password(request: ResetPasswordRequest):
-    """Reset password using token"""
-    try:
-        # Check if token exists and is valid
-        if request.token not in password_reset_tokens:
-            raise HTTPException(status_code=400, detail="Invalid or expired token")
-        
-        token_data = password_reset_tokens[request.token]
-        
-        # Check if token is expired
-        if datetime.now() > token_data["expires_at"]:
-            del password_reset_tokens[request.token]
-            raise HTTPException(status_code=400, detail="Token has expired")
-        
-        # Update password
-        success = user_manager.update_user_password(token_data["email"], request.new_password)
-        
-        if success:
-            # Remove used token
-            del password_reset_tokens[request.token]
-            return {"success": True, "message": "Password updated successfully"}
-        else:
-            raise HTTPException(status_code=500, detail="Failed to update password")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Error in reset password: {e}")
-        raise HTTPException(status_code=500, detail="Failed to reset password")
+# Password management removed - Stripe handles user authentication
+# @app.post("/api/forgot-password") - REMOVED
+# @app.post("/api/reset-password") - REMOVED
 
 @app.post("/api/cancel-subscription")
 async def cancel_subscription(request: SignInRequest):
-    """Cancel user subscription"""
+    """Cancel subscription using Stripe customer management"""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
     try:
-        # Authenticate user
-        user = user_manager.authenticate_user(request.email, request.password)
+        # Find Stripe customer by email
+        customers = stripe.Customer.list(email=request.email, limit=1)
+        
+        if not customers.data:
+            raise HTTPException(status_code=401, detail="Account not found")
+        
+        customer = customers.data[0]
+        
+        # Find user by Stripe customer ID
+        user = user_manager.get_user_by_stripe_customer_id(customer.id)
+        
         if not user:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+            raise HTTPException(status_code=401, detail="User account not found")
         
-        # Cancel subscription (for now, just mark as cancelled in database)
-        success = user_manager.cancel_user_subscription(user["access_code"])
+        # Cancel subscription in Stripe
+        subscriptions = stripe.Subscription.list(customer=customer.id, status='active', limit=1)
         
-        if success:
-            return {
-                "success": True, 
-                "message": "Subscription cancelled. You have access until the end of your billing period.",
-                "access_until": user.get("billing_end_date", "End of current period")
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Failed to cancel subscription")
-            
+        if not subscriptions.data:
+            raise HTTPException(status_code=400, detail="No active subscription found")
+        
+        subscription = subscriptions.data[0]
+        
+        # Cancel at period end (user keeps access until billing period ends)
+        cancelled_subscription = stripe.Subscription.modify(
+            subscription.id,
+            cancel_at_period_end=True
+        )
+        
+        # Update local billing status
+        user_manager.update_user_billing_status(user.access_code, 'cancelling')
+        
+        return {
+            "success": True,
+            "message": "Subscription cancelled. You'll have access until the end of your billing period.",
+            "cancel_at": cancelled_subscription.cancel_at
+        }
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        raise HTTPException(status_code=400, detail=f"Subscription error: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error cancelling subscription: {e}")
+        print(f"Cancel subscription error: {e}")
         raise HTTPException(status_code=500, detail="Failed to cancel subscription")
 
 @app.post("/api/renew-subscription")
 async def renew_subscription(request: SignInRequest):
-    """Renew cancelled subscription"""
+    """Renew subscription using Stripe customer management"""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
     try:
-        # Authenticate user
-        user = user_manager.authenticate_user(request.email, request.password)
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+        # Find Stripe customer by email
+        customers = stripe.Customer.list(email=request.email, limit=1)
         
-        # Check if subscription is cancelled
-        if user.get("billing_status") != "cancelled":
+        if not customers.data:
+            raise HTTPException(status_code=401, detail="Account not found")
+        
+        customer = customers.data[0]
+        
+        # Find user by Stripe customer ID
+        user = user_manager.get_user_by_stripe_customer_id(customer.id)
+        
+        if not user:
+            raise HTTPException(status_code=401, detail="User account not found")
+        
+        # Find subscription that's being cancelled
+        subscriptions = stripe.Subscription.list(customer=customer.id, status='active', limit=1)
+        
+        if not subscriptions.data:
+            raise HTTPException(status_code=400, detail="No active subscription found")
+        
+        subscription = subscriptions.data[0]
+        
+        if not subscription.cancel_at_period_end:
             raise HTTPException(status_code=400, detail="Subscription is not cancelled")
         
-        # Renew subscription
-        success = user_manager.renew_user_subscription(user["access_code"])
+        # Reactivate subscription
+        renewed_subscription = stripe.Subscription.modify(
+            subscription.id,
+            cancel_at_period_end=False
+        )
         
-        if success:
-            return {
-                "success": True, 
-                "message": "Subscription renewed successfully"
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Failed to renew subscription")
-            
+        # Update local billing status
+        user_manager.update_user_billing_status(user.access_code, 'active')
+        
+        return {
+            "success": True,
+            "message": "Subscription renewed successfully",
+            "current_period_end": renewed_subscription.current_period_end
+        }
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        raise HTTPException(status_code=400, detail=f"Subscription error: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error renewing subscription: {e}")
+        print(f"Renew subscription error: {e}")
         raise HTTPException(status_code=500, detail="Failed to renew subscription")
 
 if __name__ == "__main__":
