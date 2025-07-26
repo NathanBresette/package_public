@@ -18,11 +18,9 @@ from psycopg2.extras import RealDictCursor
 
 @dataclass
 class UserProfile:
-    """User profile with access control and cost tracking"""
+    """User profile with access control and cost tracking - NO PII stored"""
     access_code: str
-    user_name: str
-    email: str = ""
-    password_hash: str = ""
+    stripe_customer_id: str = ""
     is_active: bool = True
     is_admin: bool = False
     created_at: str = ""
@@ -73,14 +71,12 @@ class UserManagerPostgreSQL:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Create users table
+                # Create users table - NO PII stored
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users (
                         id SERIAL PRIMARY KEY,
                         access_code VARCHAR(50) UNIQUE NOT NULL,
-                        email VARCHAR(255) UNIQUE,
-                        password_hash TEXT,
-                        user_name VARCHAR(255) NOT NULL,
+                        stripe_customer_id VARCHAR(255) UNIQUE,
                         is_active BOOLEAN DEFAULT TRUE,
                         is_admin BOOLEAN DEFAULT FALSE,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -97,7 +93,7 @@ class UserManagerPostgreSQL:
                     )
                 ''')
                 
-                # Create usage_records table
+                # Create usage_records table - NO PII stored
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS usage_records (
                         id SERIAL PRIMARY KEY,
@@ -116,12 +112,12 @@ class UserManagerPostgreSQL:
                 
                 # Create indexes for better performance
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_access_code ON users(access_code)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_stripe_customer ON users(stripe_customer_id)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_usage_access_code ON usage_records(access_code)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_usage_timestamp ON usage_records(timestamp)')
                 
                 conn.commit()
-                print("✅ PostgreSQL database schema created successfully!")
+                print("✅ PostgreSQL database schema created successfully (PII-free)!")
                 
         except Exception as e:
             print(f"❌ Error setting up PostgreSQL database: {e}")
@@ -267,12 +263,23 @@ class UserManagerPostgreSQL:
             return True  # Allow if database error
     
     def record_usage(self, access_code: str, usage_info: Dict) -> bool:
-        """Record usage for cost tracking"""
+        """Record usage for cost tracking - NO sensitive data stored"""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Insert usage record
+                # Only store non-sensitive usage data
+                safe_usage_info = {
+                    'request_type': usage_info.get('request_type', 'unknown'),
+                    'tokens_used': usage_info.get('tokens_used', 0),
+                    'cost': usage_info.get('cost', 0.0),
+                    'prompt_length': usage_info.get('prompt_length', 0),
+                    'response_length': usage_info.get('response_length', 0),
+                    'success': usage_info.get('success', True),
+                    'error_message': usage_info.get('error_message', '')
+                }
+                
+                # Insert usage record - NO sensitive data
                 cursor.execute('''
                     INSERT INTO usage_records (
                         access_code, request_type, tokens_used, cost,
@@ -280,16 +287,16 @@ class UserManagerPostgreSQL:
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ''', (
                     access_code,
-                    usage_info.get('request_type', 'unknown'),
-                    usage_info.get('tokens_used', 0),
-                    usage_info.get('cost', 0.0),
-                    usage_info.get('prompt_length', 0),
-                    usage_info.get('response_length', 0),
-                    usage_info.get('success', True),
-                    usage_info.get('error_message', '')
+                    safe_usage_info['request_type'],
+                    safe_usage_info['tokens_used'],
+                    safe_usage_info['cost'],
+                    safe_usage_info['prompt_length'],
+                    safe_usage_info['response_length'],
+                    safe_usage_info['success'],
+                    safe_usage_info['error_message']
                 ))
                 
-                # Update user totals
+                # Update user totals - NO sensitive data
                 cursor.execute('''
                     UPDATE users SET 
                         total_requests = total_requests + 1,
@@ -298,8 +305,8 @@ class UserManagerPostgreSQL:
                         last_activity = CURRENT_TIMESTAMP
                     WHERE access_code = %s
                 ''', (
-                    usage_info.get('cost', 0.0),
-                    usage_info.get('tokens_used', 0),
+                    safe_usage_info['cost'],
+                    safe_usage_info['tokens_used'],
                     access_code
                 ))
                 
@@ -380,36 +387,30 @@ class UserManagerPostgreSQL:
             except:
                 return code  # Return if database error
     
-    def create_user_account(self, email: str, password: str, access_code: str, 
-                           user_name: str = "", daily_limit: int = 100, 
-                           monthly_budget: float = 10.0) -> bool:
-        """Create a new user account with email/password"""
+    def create_user_account(self, stripe_customer_id: str, access_code: str, 
+                           daily_limit: int = 100, monthly_budget: float = 10.0) -> bool:
+        """Create a new user account with Stripe customer ID - NO PII stored"""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                
-                # Check if email already exists
-                cursor.execute('SELECT 1 FROM users WHERE email = %s', (email,))
-                if cursor.fetchone():
-                    return False
                 
                 # Check if access code already exists
                 cursor.execute('SELECT 1 FROM users WHERE access_code = %s', (access_code,))
                 if cursor.fetchone():
                     return False
                 
-                # Create user
-                password_hash = self.hash_password(password)
-                user_name = user_name or email.split('@')[0]
+                # Check if stripe customer already exists
+                cursor.execute('SELECT 1 FROM users WHERE stripe_customer_id = %s', (stripe_customer_id,))
+                if cursor.fetchone():
+                    return False
                 
+                # Create user - only non-PII data
                 cursor.execute('''
                     INSERT INTO users (
-                        access_code, email, password_hash, user_name,
-                        daily_limit, monthly_budget
-                    ) VALUES (%s, %s, %s, %s, %s, %s)
+                        access_code, stripe_customer_id, daily_limit, monthly_budget
+                    ) VALUES (%s, %s, %s, %s)
                 ''', (
-                    access_code, email, password_hash, user_name,
-                    daily_limit, monthly_budget
+                    access_code, stripe_customer_id, daily_limit, monthly_budget
                 ))
                 
                 conn.commit()
@@ -419,42 +420,29 @@ class UserManagerPostgreSQL:
             print(f"Error creating user account: {e}")
             return False
     
-    def authenticate_user(self, email: str, password: str) -> Optional[Dict]:
-        """Authenticate user with email and password"""
+    def get_user_by_stripe_customer_id(self, stripe_customer_id: str) -> Optional[UserProfile]:
+        """Get user profile by Stripe customer ID - NO PII returned"""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor(cursor_factory=RealDictCursor)
-                
-                cursor.execute('''
-                    SELECT * FROM users WHERE email = %s AND is_active = TRUE
-                ''', (email,))
+                cursor.execute('SELECT * FROM users WHERE stripe_customer_id = %s', (stripe_customer_id,))
                 user = cursor.fetchone()
                 
-                if user and self.verify_password(password, user['password_hash']):
-                    return dict(user)
-                
+                if user:
+                    return UserProfile(**dict(user))
                 return None
-                
         except Exception as e:
-            print(f"Error authenticating user: {e}")
+            print(f"Error getting user by Stripe customer ID: {e}")
             return None
     
-    def hash_password(self, password: str) -> str:
-        """Hash a password using SHA256"""
-        return hashlib.sha256(password.encode()).hexdigest()
-    
-    def verify_password(self, password: str, password_hash: str) -> bool:
-        """Verify a password against its hash"""
-        return self.hash_password(password) == password_hash
-    
-    def update_user_billing_status(self, email: str, status: str) -> bool:
+    def update_user_billing_status(self, access_code: str, status: str) -> bool:
         """Update user's billing status"""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
-                    UPDATE users SET billing_status = %s WHERE email = %s
-                ''', (status, email))
+                    UPDATE users SET billing_status = %s WHERE access_code = %s
+                ''', (status, access_code))
                 conn.commit()
                 return cursor.rowcount > 0
         except Exception as e:
@@ -462,12 +450,12 @@ class UserManagerPostgreSQL:
             return False
     
     def get_all_users_summary(self) -> List[Dict]:
-        """Get summary of all users"""
+        """Get summary of all users - NO PII returned"""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor(cursor_factory=RealDictCursor)
                 cursor.execute('''
-                    SELECT access_code, user_name, email, is_active, 
+                    SELECT access_code, stripe_customer_id, is_active, 
                            total_requests, total_cost, total_tokens,
                            daily_limit, monthly_budget, billing_status,
                            created_at, last_activity
@@ -494,23 +482,6 @@ class UserManagerPostgreSQL:
         except Exception as e:
             print(f"Error getting user by email: {e}")
             return None
-    
-    def update_user_password(self, email: str, new_password: str) -> bool:
-        """Update user password"""
-        try:
-            password_hash = self.hash_password(new_password)
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    UPDATE users 
-                    SET password_hash = %s 
-                    WHERE email = %s
-                ''', (password_hash, email))
-                conn.commit()
-                return cursor.rowcount > 0
-        except Exception as e:
-            print(f"Error updating password: {e}")
-            return False
     
     def cancel_user_subscription(self, access_code: str) -> bool:
         """Cancel user subscription"""
@@ -544,9 +515,9 @@ class UserManagerPostgreSQL:
             print(f"Error renewing subscription: {e}")
             return False
     
-    def create_user(self, access_code: str, user_name: str, email: str = "", 
+    def create_user(self, access_code: str, stripe_customer_id: str = "", 
                    daily_limit: int = 100, monthly_budget: float = 10.0) -> bool:
-        """Create a new user"""
+        """Create a new user - NO PII stored locally"""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
@@ -556,14 +527,14 @@ class UserManagerPostgreSQL:
                 if cursor.fetchone():
                     return False
                 
-                # Create user
+                # Create user - only non-PII data
                 cursor.execute('''
                     INSERT INTO users (
-                        access_code, user_name, email, daily_limit, monthly_budget,
+                        access_code, stripe_customer_id, daily_limit, monthly_budget,
                         is_active, billing_status
-                    ) VALUES (%s, %s, %s, %s, %s, TRUE, 'active')
+                    ) VALUES (%s, %s, %s, %s, TRUE, 'active')
                 ''', (
-                    access_code, user_name, email, daily_limit, monthly_budget
+                    access_code, stripe_customer_id, daily_limit, monthly_budget
                 ))
                 
                 conn.commit()
