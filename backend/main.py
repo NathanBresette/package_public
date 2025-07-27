@@ -39,33 +39,10 @@ context_summarizer = ContextSummarizer()
 response_cache = SmartResponseCache(max_cache_size=200, cache_ttl_hours=4)  # Conservative settings for memory
 conversation_memory = ConversationMemory()
 
-# CORS middleware with specific origins for credentials
+# CORS middleware - allow all origins for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://rgentai.com",
-        "https://www.rgentai.com",
-        "https://rgentaipaymentfrontend-ew8pk5dl5-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-o4ob99zze-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-24qwzmcww-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-2f73fkw67-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-7xcldi1f1-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-5h45s8n8c-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-d7z59ufy0-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-cd24rb2wa-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-8s6ucoaol-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-7vk5c8mrf-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-79nkmdy48-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-rabswexjg-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-mq0o4tkgk-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-k9jxnqgi9-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-72uqwy40t-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-m0wbxn6a0-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-7h9ix8zte-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-4rxewgad5-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-2xb7w0q9i-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-g99m59s1w-nathanbresettes-projects.vercel.app"
-    ],
+    allow_origins=["*"],  # Allow all origins for now
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
