@@ -1449,9 +1449,15 @@ async def create_account(request: CreateAccountRequest):
             stripe.Customer.delete(customer.id)
             raise HTTPException(status_code=500, detail="Failed to create user account")
         
-        # Return success with access code
+        # Return success with access code and user object
         return {
             "success": True,
+            "user": {
+                "access_code": access_code,
+                "plan_type": request.plan_type,
+                "stripe_customer_id": customer.id,
+                "email": request.email
+            },
             "access_code": access_code,
             "plan_type": request.plan_type,
             "stripe_customer_id": customer.id,
