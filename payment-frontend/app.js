@@ -1,5 +1,5 @@
 // Initialize Stripe
-const stripe = Stripe('pk_live_51Rp76L1KiJAKvPzK10Ng5d6uvO4rayAIzO0SytAHfDizoCUX1X9bPKRnjjuPBd997GtQ3VdATVnFDPvOa6eTWyrR0056nMvXis'); // Live Stripe publishable key
+const stripe = Stripe('pk_test_51Rp76V075QJxEpaQKmYsfObmwGt7i3SKY9FYv5cR5uZpF3CftDAkFrah43DfIvXiQz9zkkbx8fDmPi1Jkbo4RN8M00Dl1K5jQx'); // Test Stripe publishable key
 
 // Backend API URL
 const BACKEND_URL = 'https://rgent.onrender.com';
