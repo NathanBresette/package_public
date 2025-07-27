@@ -1362,10 +1362,15 @@ async def signin(request: SignInRequest):
             raise HTTPException(status_code=401, detail="Account is disabled")
         
         # Return user data (no password verification needed - Stripe handles authentication)
+        # Get plan type from customer metadata, fallback to 'free' if not set
+        plan_type = 'free'  # default
+        if customer.metadata and 'plan_type' in customer.metadata:
+            plan_type = customer.metadata.get('plan_type')
+        
         return {
             "success": True,
             "access_code": user.access_code,
-            "plan_type": customer.metadata.get('plan_type', 'pro'),
+            "plan_type": plan_type,
             "stripe_customer_id": customer.id,
             "billing_status": user.billing_status,
             "message": "Sign in successful"
@@ -1387,19 +1392,16 @@ async def create_account(request: CreateAccountRequest):
         raise HTTPException(status_code=500, detail="Stripe not configured")
     
     try:
-        # Create Stripe customer for PII management
+        # Create Stripe customer - metadata will be set by Stripe webhooks/products
         customer = stripe.Customer.create(
-            email=request.email,
-            metadata={
-                'plan_type': request.plan_type,
-                'created_at': datetime.now().isoformat()
-            }
+            email=request.email
+            # No metadata here - let Stripe handle it based on products/subscriptions
         )
         
         # Generate access code
         access_code = user_manager.generate_access_code()
         
-        # Determine plan limits
+        # Determine plan limits based on plan_type
         if request.plan_type == 'free':
             daily_limit = 50
             monthly_budget = 5.0
