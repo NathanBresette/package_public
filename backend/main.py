@@ -39,12 +39,28 @@ context_summarizer = ContextSummarizer()
 response_cache = SmartResponseCache(max_cache_size=200, cache_ttl_hours=4)  # Conservative settings for memory
 conversation_memory = ConversationMemory()
 
-# CORS middleware - allow all origins for development
+# CORS middleware - secure configuration for production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for now
+    allow_origins=[
+        "https://rgentai.com",
+        "https://www.rgentai.com",
+        "https://rgentaipaymentfrontend.vercel.app",
+        "https://rgentaipaymentfrontend-git-main-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-nka6bz0vz-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-jtp0tnaxe-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-gqkul5cqg-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-8etdab7q3-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-6mah5bcp1-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-48aut5e63-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-99wx5gg8n-nathanbresettes-projects.vercel.app",
+        "http://localhost:3000",  # For local development
+        "http://localhost:5000",  # For local development
+        "http://127.0.0.1:3000",  # For local development
+        "http://127.0.0.1:5000"   # For local development
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
