@@ -164,7 +164,7 @@ class PaymentSuccessRequest(BaseModel):
 
 class SignInRequest(BaseModel):
     email: str
-    password: str = ""  # Optional in PII-free system, not used for authentication
+    password: str  # Required for secure authentication
 
 class CreateAccountRequest(BaseModel):
     email: str
@@ -1425,39 +1425,26 @@ async def create_stripe_checkout(request: LookupKeyRequest):
 
 @app.post("/api/signin")
 async def signin(request: SignInRequest, response: Response):
-    """Sign in using Stripe customer management - PII-free authentication"""
-    if not STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=500, detail="Stripe not configured")
-    
+    """Sign in using secure email + password authentication"""
     try:
-        # Find Stripe customer by email (this is the authentication method in PII-free system)
-        customers = stripe.Customer.list(email=request.email, limit=1)
-        
-        if not customers.data:
-            raise HTTPException(status_code=401, detail="Account not found. Please create an account first.")
-        
-        customer = customers.data[0]
-        
-        # Find user by Stripe customer ID
-        user = user_manager.get_user_by_stripe_customer_id(customer.id)
+        # Authenticate user with email and password
+        user = user_manager.authenticate_user(request.email, request.password)
         
         if not user:
-            raise HTTPException(status_code=401, detail="User account not found. Please complete your account setup.")
+            raise HTTPException(status_code=401, detail="Invalid email or password")
         
         if not user.is_active:
             raise HTTPException(status_code=401, detail="Account is disabled. Please contact support.")
         
-        # Get plan type from customer metadata, fallback to 'free_trial' if not set
-        plan_type = 'free_trial'  # default
-        if customer.metadata and 'plan_type' in customer.metadata:
-            plan_type = customer.metadata.get('plan_type')
+        # Get plan type from user data or default to 'free_trial'
+        plan_type = getattr(user, 'plan_type', 'free_trial')
         
         # Create session token
         user_data = {
             "access_code": user.access_code,
             "email": request.email,
             "plan_type": plan_type,
-            "stripe_customer_id": customer.id
+            "stripe_customer_id": user.stripe_customer_id
         }
         session_token = create_session_token(user_data)
         
@@ -1466,16 +1453,13 @@ async def signin(request: SignInRequest, response: Response):
             "success": True,
             "access_code": user.access_code,
             "plan_type": plan_type,
-            "stripe_customer_id": customer.id,
-            "subscription_id": customer.id,  # Use customer ID as subscription_id for simplicity
+            "stripe_customer_id": user.stripe_customer_id,
+            "subscription_id": user.stripe_customer_id,  # Use customer ID as subscription_id for simplicity
             "billing_status": user.billing_status,
             "message": "Sign in successful",
             "token": session_token  # JWT token for frontend storage
         }
         
-    except stripe.error.StripeError as e:
-        print(f"Stripe error: {e}")
-        raise HTTPException(status_code=400, detail=f"Authentication error: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
@@ -1513,9 +1497,11 @@ async def create_account(request: CreateAccountRequest, response: Response):
             daily_limit = 5000  # High limit for pay-per-token
             monthly_budget = 50.0
         
-        # Create user with Stripe customer ID - NO PII stored
+        # Create user with email and password for secure authentication
         success = user_manager.create_user(
             access_code=access_code,
+            email=request.email,
+            password=request.password,
             stripe_customer_id=customer.id,
             daily_limit=daily_limit,
             monthly_budget=monthly_budget
