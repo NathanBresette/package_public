@@ -31,6 +31,8 @@ import jwt
 from contextlib import asynccontextmanager
 import re
 import html
+from starlette.middleware.cors import CORSMiddleware
+from starlette.datastructures import Headers
 
 app = FastAPI(title="RStudio AI Backend", version="1.3.0")
 
@@ -39,57 +41,90 @@ context_summarizer = ContextSummarizer()
 response_cache = SmartResponseCache(max_cache_size=200, cache_ttl_hours=4)  # Conservative settings for memory
 conversation_memory = ConversationMemory()
 
-# CORS middleware with specific origins for credentials
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost",
-        "https://localhost", 
-        "http://127.0.0.1",
-        "https://127.0.0.1",
-        "http://127.0.0.1:1663",
-        "https://rgentai.com",
-        "https://www.rgentai.com",
-        "https://rgentaipaymentfrontend-ew8pk5dl5-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-o4ob99zze-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-24qwzmcww-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-2f73fkw67-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-7xcldi1f1-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-5h45s8n8c-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-d7z59ufy0-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-cd24rb2wa-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-8s6ucoaol-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-7vk5c8mrf-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-79nkmdy48-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-rabswexjg-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-mq0o4tkgk-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-k9jxnqgi9-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-72uqwy40t-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-m0wbxn6a0-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-7h9ix8zte-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-4rxewgad5-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-2xb7w0q9i-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-g99m59s1w-nathanbresettes-projects.vercel.app"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Custom CORS middleware for development
+class DevCORSMiddleware(CORSMiddleware):
+    LOCALHOST_RE = re.compile(r"^http://(localhost|127\.0\.0\.1):\d+$")
 
-# Custom CORS handler for localhost origins
-@app.middleware("http")
-async def handle_localhost_cors(request: Request, call_next):
-    """Handle CORS for localhost origins that might not be in the main CORS config"""
-    response = await call_next(request)
-    
-    origin = request.headers.get("origin")
-    if origin and ("localhost" in origin or "127.0.0.1" in origin):
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-    
-    return response
+    async def __call__(self, scope, receive, send):
+        # Intercept HTTP requests only
+        if scope["type"] == "http":
+            headers = Headers(scope=scope)
+            origin = headers.get("origin")
+
+            # Dynamically allow localhost:<port> origins
+            if origin and self.LOCALHOST_RE.match(origin):
+                if origin not in self.allow_origins:
+                    self.allow_origins.append(origin)
+
+        return await super().__call__(scope, receive, send)
+
+# CORS middleware - use dynamic for development, strict for production
+if os.environ.get("DEV") or os.environ.get("ENVIRONMENT") == "development":
+    # Development: Allow dynamic localhost origins
+    app.add_middleware(
+        DevCORSMiddleware,
+        allow_origins=[
+            "https://rgentai.com",
+            "https://www.rgentai.com",
+            "https://rgentaipaymentfrontend-ew8pk5dl5-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-o4ob99zze-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-24qwzmcww-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-2f73fkw67-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-7xcldi1f1-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-5h45s8n8c-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-d7z59ufy0-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-cd24rb2wa-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-8s6ucoaol-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-7vk5c8mrf-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-79nkmdy48-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-rabswexjg-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-mq0o4tkgk-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-k9jxnqgi9-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-72uqwy40t-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-m0wbxn6a0-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-7h9ix8zte-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-4rxewgad5-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-2xb7w0q9i-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-g99m59s1w-nathanbresettes-projects.vercel.app"
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # Production: Strict CORS for security
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "https://rgentai.com",
+            "https://www.rgentai.com",
+            "https://rgentaipaymentfrontend-ew8pk5dl5-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-o4ob99zze-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-24qwzmcww-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-2f73fkw67-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-7xcldi1f1-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-5h45s8n8c-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-d7z59ufy0-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-cd24rb2wa-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-8s6ucoaol-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-7vk5c8mrf-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-79nkmdy48-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-rabswexjg-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-mq0o4tkgk-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-k9jxnqgi9-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-72uqwy40t-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-m0wbxn6a0-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-7h9ix8zte-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-4rxewgad5-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-2xb7w0q9i-nathanbresettes-projects.vercel.app",
+            "https://rgentaipaymentfrontend-g99m59s1w-nathanbresettes-projects.vercel.app"
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
 
 # Security middleware for CSP headers
 @app.middleware("http")
