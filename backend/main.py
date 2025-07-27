@@ -1425,7 +1425,7 @@ async def create_stripe_checkout(request: LookupKeyRequest):
             }
         )
         
-        return {"id": checkout_session.id}
+        return {"url": checkout_session.url}
         
     except Exception as e:
         print(f"Error creating Stripe checkout session: {str(e)}")
