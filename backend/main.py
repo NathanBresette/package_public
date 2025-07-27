@@ -1872,11 +1872,22 @@ async def debug_stripe_config():
         # Test Stripe connection if secret is set
         if stripe_secret:
             try:
+                # Set the API key
                 stripe.api_key = stripe_secret
-                customers = stripe.Customer.list(limit=1)
-                debug_info["stripe_connection"] = "✅ Success"
+                
+                # Test with a simple API call
+                try:
+                    customers = stripe.Customer.list(limit=1)
+                    debug_info["stripe_connection"] = "✅ Success"
+                except stripe.error.AuthenticationError:
+                    debug_info["stripe_connection"] = "❌ Authentication failed - check your secret key"
+                except stripe.error.APIConnectionError:
+                    debug_info["stripe_connection"] = "❌ Connection failed - check your internet"
+                except Exception as e:
+                    debug_info["stripe_connection"] = f"❌ API Error: {str(e)}"
+                    
             except Exception as e:
-                debug_info["stripe_connection"] = f"❌ Failed: {str(e)}"
+                debug_info["stripe_connection"] = f"❌ Setup Error: {str(e)}"
         else:
             debug_info["stripe_connection"] = "❌ No secret key"
         
