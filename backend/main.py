@@ -51,12 +51,27 @@ app.add_middleware(
         "http://127.0.0.1:*",
         "https://127.0.0.1",
         "https://127.0.0.1:*",
+        # Add common RStudio ports
         "http://localhost:8888",
         "http://localhost:8787",
         "http://localhost:4321",
+        "http://localhost:8889",
+        "http://localhost:8890",
+        "http://localhost:8891",
+        "http://localhost:8892",
+        "http://localhost:8893",
+        "http://localhost:8894",
+        "http://localhost:8895",
         "http://127.0.0.1:8888",
         "http://127.0.0.1:8787",
         "http://127.0.0.1:4321",
+        "http://127.0.0.1:8889",
+        "http://127.0.0.1:8890",
+        "http://127.0.0.1:8891",
+        "http://127.0.0.1:8892",
+        "http://127.0.0.1:8893",
+        "http://127.0.0.1:8894",
+        "http://127.0.0.1:8895",
         "https://rgentai.com",
         "https://www.rgentai.com",
         "https://rgentaipaymentfrontend-ew8pk5dl5-nathanbresettes-projects.vercel.app",
@@ -113,6 +128,14 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    
+    # Dynamically allow localhost origins for CORS
+    origin = request.headers.get("origin")
+    if origin and ("localhost" in origin or "127.0.0.1" in origin):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
     
     return response
 
