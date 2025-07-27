@@ -565,8 +565,8 @@ async def chat_with_ai(request: ChatRequest):
         if context_parts:
             enhanced_prompt = "\n".join(context_parts) + "\n\n=== USER QUERY ===\n" + request.prompt
         
-        # Call Gemini API with enhanced prompt
-        response, usage_info = await call_gemini_api(enhanced_prompt)
+        # Call Claude API with enhanced prompt
+        response, usage_info = await call_claude_api(enhanced_prompt)
         
         # Store messages in conversation memory
         conversation_memory.add_message(conversation_id, "user", request.prompt, request.context_data, request.context_type)
