@@ -168,6 +168,9 @@ class CreateAccountRequest(BaseModel):
     email: str
     plan_type: str
 
+class CustomerPortalRequest(BaseModel):
+    email: str
+
 class ForgotPasswordRequest(BaseModel):
     email: str
 
@@ -1421,7 +1424,7 @@ async def create_stripe_checkout(request: LookupKeyRequest):
         raise HTTPException(status_code=500, detail=f"Payment setup failed: {str(e)}")
 
 @app.post("/api/create-customer-portal-session")
-async def create_customer_portal_session(request: CreateAccountRequest):
+async def create_customer_portal_session(request: CustomerPortalRequest):
     """Create Stripe Customer Portal session for account management"""
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=500, detail="Stripe not configured")
