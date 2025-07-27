@@ -4,11 +4,11 @@ const stripe = Stripe('pk_test_51Rp76V075QJxEpaQKmYsfObmwGt7i3SKY9FYv5cR5uZpF3Cf
 // Backend API URL
 const BACKEND_URL = 'https://rgent.onrender.com';
 
-// Purchase plan function - redirect to signin
-async function purchasePlan(planType) {
-    // Redirect to signin page with plan type
-    window.location.href = `signin.html?plan=${planType}`;
-}
+// Purchase plan function - redirect to signin (DEPRECATED - now handled in plans.html)
+// async function purchasePlan(planType) {
+//     // Redirect to signin page with plan type
+//     window.location.href = `signin.html?plan=${planType}`;
+// }
 
 // Helper function to get plan name
 function getPlanName(planType) {
