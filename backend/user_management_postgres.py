@@ -99,7 +99,7 @@ class UserManagerPostgreSQL:
                         ''')
                         
                         # Remove PII columns if they exist
-                        for column in ['email', 'password_hash', 'user_name']:
+                        for column in ['email', 'password_hash']:
                             cursor.execute('''
                                 SELECT EXISTS (
                                     SELECT FROM information_schema.columns
@@ -172,7 +172,7 @@ class UserManagerPostgreSQL:
                 
                 # Simple check: just see if user exists and is active
                 cursor.execute('''
-                    SELECT access_code, user_name, is_active, billing_status 
+                    SELECT access_code, is_active, billing_status 
                     FROM users 
                     WHERE access_code = %s
                 ''', (access_code,))
@@ -181,8 +181,8 @@ class UserManagerPostgreSQL:
                 if not user:
                     return False, "Invalid access code"
                 
-                # user is a tuple: (access_code, user_name, is_active, billing_status)
-                if not user[2]:  # is_active is at index 2
+                # user is a tuple: (access_code, is_active, billing_status)
+                if not user[1]:  # is_active is at index 1
                     return False, "User is inactive"
                 
                 # Update last activity
@@ -389,8 +389,6 @@ class UserManagerPostgreSQL:
                 
                 return {
                     'access_code': user['access_code'],
-                    'user_name': user['user_name'],
-                    'email': user['email'],
                     'is_active': user['is_active'],
                     'created_at': user['created_at'].isoformat() if user['created_at'] else '',
                     'last_activity': user['last_activity'].isoformat() if user['last_activity'] else '',

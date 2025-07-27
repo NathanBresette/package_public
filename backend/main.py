@@ -69,14 +69,11 @@ class ContextResponse(BaseModel):
 
 class CreateUserRequest(BaseModel):
     access_code: str
-    user_name: str
-    email: str = ""
+    stripe_customer_id: str = ""
     daily_limit: int = 100
     monthly_budget: float = 10.0
 
 class UpdateUserRequest(BaseModel):
-    user_name: Optional[str] = None
-    email: Optional[str] = None
     daily_limit: Optional[int] = None
     monthly_budget: Optional[float] = None
     rate_limit: Optional[int] = None
@@ -455,10 +452,7 @@ async def validate_access(request: AccessCodeRequest):
     """Validate an access code"""
     is_valid, message = user_manager.validate_access(request.access_code)
     if is_valid:
-        # Get user stats to return user information
-        user_stats = user_manager.get_user_stats(request.access_code)
-        user_name = user_stats.get('user_name', 'Unknown') if user_stats else 'Unknown'
-        return {"valid": True, "user": user_name}
+        return {"valid": True, "message": "Access granted"}
     else:
         raise HTTPException(status_code=401, detail=message)
 
@@ -1075,14 +1069,13 @@ async def create_user(request: CreateUserRequest, admin_request: AdminActionRequ
     try:
         success = user_manager.create_user(
             access_code=request.access_code,
-            user_name=request.user_name,
-            email=request.email,
+            stripe_customer_id=request.stripe_customer_id,
             daily_limit=request.daily_limit,
             monthly_budget=request.monthly_budget
         )
         
         if success:
-            return {"success": True, "message": f"User {request.user_name} created successfully"}
+            return {"success": True, "message": f"User {request.access_code} created successfully"}
         else:
             return {"success": False, "message": "User already exists"}
     except Exception as e:
@@ -1266,8 +1259,7 @@ async def create_checkout_session(request: CreateCheckoutSessionRequest):
             access_code = user_manager.generate_access_code()
             user_manager.create_user(
                 access_code=access_code,
-                user_name="Free User",
-                email=request.customer_email or "free@example.com",
+                stripe_customer_id="",  # Free users don't have Stripe customer ID initially
                 daily_limit=50,
                 monthly_budget=0.0
             )
