@@ -1995,6 +1995,91 @@ async def debug_stripe_products():
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/debug/test-checkout")
+async def test_checkout_creation(request: LookupKeyRequest):
+    """Debug endpoint to test checkout session creation"""
+    try:
+        stripe_secret = os.getenv("STRIPE_SECRET_KEY")
+        if not stripe_secret:
+            return {"error": "STRIPE_SECRET_KEY not set"}
+        
+        stripe.api_key = stripe_secret
+        
+        debug_info = {
+            "request": {
+                "lookup_key": request.lookup_key,
+                "customer_email": request.customer_email
+            },
+            "steps": {}
+        }
+        
+        # Step 1: Get the price from lookup key
+        try:
+            prices = stripe.Price.list(
+                lookup_keys=[request.lookup_key],
+                expand=['data.product']
+            )
+            debug_info["steps"]["price_lookup"] = {
+                "success": True,
+                "prices_found": len(prices.data),
+                "price_details": []
+            }
+            
+            for price in prices.data:
+                debug_info["steps"]["price_lookup"]["price_details"].append({
+                    "id": price.id,
+                    "lookup_key": price.lookup_key,
+                    "active": price.active,
+                    "unit_amount": price.unit_amount,
+                    "currency": price.currency,
+                    "recurring": price.recurring,
+                    "product_id": price.product.id if hasattr(price.product, 'id') else None
+                })
+                
+        except Exception as e:
+            debug_info["steps"]["price_lookup"] = {
+                "success": False,
+                "error": str(e)
+            }
+            return debug_info
+        
+        if not prices.data:
+            debug_info["steps"]["price_lookup"]["error"] = f"No price found for lookup key: {request.lookup_key}"
+            return debug_info
+        
+        # Step 2: Create checkout session
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                line_items=[{
+                    'price': prices.data[0].id,
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                success_url='https://rgentaipaymentfrontend-ik29jvzcv-nathanbresettes-projects.vercel.app/dashboard?session_id={CHECKOUT_SESSION_ID}',
+                cancel_url='https://rgentaipaymentfrontend-ik29jvzcv-nathanbresettes-projects.vercel.app/plans?cancelled=true',
+                metadata={
+                    'lookup_key': request.lookup_key,
+                    'customer_email': request.customer_email or ''
+                }
+            )
+            
+            debug_info["steps"]["checkout_creation"] = {
+                "success": True,
+                "session_id": checkout_session.id,
+                "url": checkout_session.url
+            }
+            
+        except Exception as e:
+            debug_info["steps"]["checkout_creation"] = {
+                "success": False,
+                "error": str(e)
+            }
+        
+        return debug_info
+        
+    except Exception as e:
+        return {"error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000) 
