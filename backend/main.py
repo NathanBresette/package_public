@@ -1468,7 +1468,67 @@ async def stripe_webhook(request: Request):
         )
         
         # Handle the event
-        if event['type'] == 'invoice.paid':
+        if event['type'] == 'customer.created':
+            # Set default metadata for new customers
+            customer = event['data']['object']
+            print(f"🆕 New customer created: {customer.email}")
+            
+            # Set default metadata for free trial
+            stripe.Customer.modify(
+                customer.id,
+                metadata={
+                    'plan_type': 'free_trial',
+                    'created_at': datetime.now().isoformat(),
+                    'trial_requests_remaining': '50'
+                }
+            )
+            print(f"✅ Set default metadata for customer: {customer.id}")
+            
+        elif event['type'] == 'customer.subscription.created':
+            # Update customer metadata when subscription is created
+            subscription = event['data']['object']
+            customer_id = subscription.customer
+            
+            # Get plan type from subscription
+            lookup_key = subscription.metadata.get('lookup_key', '')
+            if 'haiku' in lookup_key:
+                plan_type = 'pro_haiku'
+            elif 'sonnet' in lookup_key:
+                plan_type = 'pro_sonnet'
+            else:
+                plan_type = 'pro'
+            
+            # Update customer metadata
+            stripe.Customer.modify(
+                customer_id,
+                metadata={
+                    'plan_type': plan_type,
+                    'subscription_id': subscription.id,
+                    'updated_at': datetime.now().isoformat()
+                }
+            )
+            print(f"✅ Updated customer metadata for subscription: {subscription.id}")
+            
+        elif event['type'] == 'checkout.session.completed':
+            # Handle successful checkout
+            session = event['data']['object']
+            customer_id = session.customer
+            
+            # Get plan type from session metadata
+            plan_type = session.metadata.get('plan_type', 'free_trial')
+            
+            # Update customer metadata
+            stripe.Customer.modify(
+                customer_id,
+                metadata={
+                    'plan_type': plan_type,
+                    'checkout_session_id': session.id,
+                    'updated_at': datetime.now().isoformat()
+                }
+            )
+            print(f"✅ Updated customer metadata for checkout: {session.id}")
+            
+        elif event['type'] == 'invoice.paid':
             # Handle successful payment via invoice
             invoice = event['data']['object']
             
