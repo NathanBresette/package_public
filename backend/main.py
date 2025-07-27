@@ -1948,23 +1948,30 @@ async def debug_stripe_products():
             'pro_sonnet_output_tokens'
         ]
         
+        # Get all prices to check lookup keys
+        all_prices = stripe.Price.list(limit=100)
+        lookup_keys_found = [price.lookup_key for price in all_prices.data if price.lookup_key]
+        
         for key in required_keys:
-            try:
-                price = stripe.Price.retrieve(key)
-                debug_info["required_lookup_keys"][key] = {
-                    "found": True,
-                    "id": price.id,
-                    "active": price.active
-                }
-            except stripe.error.InvalidRequestError:
+            if key in lookup_keys_found:
+                # Find the price with this lookup key
+                price = next((p for p in all_prices.data if p.lookup_key == key), None)
+                if price:
+                    debug_info["required_lookup_keys"][key] = {
+                        "found": True,
+                        "id": price.id,
+                        "active": price.active,
+                        "lookup_key": price.lookup_key
+                    }
+                else:
+                    debug_info["required_lookup_keys"][key] = {
+                        "found": False,
+                        "error": "Lookup key exists but price not found"
+                    }
+            else:
                 debug_info["required_lookup_keys"][key] = {
                     "found": False,
-                    "error": "Not found"
-                }
-            except Exception as e:
-                debug_info["required_lookup_keys"][key] = {
-                    "found": False,
-                    "error": str(e)
+                    "error": "Lookup key not found"
                 }
         
         return debug_info
