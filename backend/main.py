@@ -47,6 +47,7 @@ app.add_middleware(
         "https://localhost", 
         "http://127.0.0.1",
         "https://127.0.0.1",
+        "http://127.0.0.1:1663",
         "https://rgentai.com",
         "https://www.rgentai.com",
         "https://rgentaipaymentfrontend-ew8pk5dl5-nathanbresettes-projects.vercel.app",
