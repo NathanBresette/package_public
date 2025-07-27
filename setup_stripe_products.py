@@ -22,30 +22,36 @@ def setup_stripe_products():
     print("=" * 50)
     
     try:
-        # Product 1: Free Plan
-        print("\n1️⃣ Creating Free Plan Product...")
+        # Product 1: Free Trial
+        print("\n1️⃣ Creating Free Trial Product...")
         free_product = stripe.Product.create(
-            name="RgentAI Free Plan",
-            description="Free tier - pay per token pricing",
+            name="RgentAI Free Trial",
+            description="Free trial - 50 requests (one-time trial). Claude 3.5 Haiku – Fastest & most cost-effective. No card or payment required.",
             metadata={
-                'plan_type': 'free',
-                'pricing_model': 'pay_per_token',
-                'monthly_budget': '5.0'
+                'plan_type': 'free_trial',
+                'pricing_model': 'one_time_trial',
+                'model': 'haiku',
+                'trial_requests': '50',
+                'trial_type': 'one_time',
+                'no_payment_required': 'true'
             }
         )
         print(f"✅ Created product: {free_product.name} (ID: {free_product.id})")
         
-        # Free Plan Price
+        # Free Trial Price
         free_price = stripe.Price.create(
             product=free_product.id,
             unit_amount=0,  # $0
             currency='usd',
             recurring=None,  # One-time
-            lookup_key='free_plan',
+            lookup_key='free_trial',
             metadata={
-                'plan_type': 'free',
-                'pricing_model': 'pay_per_token',
-                'monthly_budget': '5.0'
+                'plan_type': 'free_trial',
+                'pricing_model': 'one_time_trial',
+                'model': 'haiku',
+                'trial_requests': '50',
+                'trial_type': 'one_time',
+                'no_payment_required': 'true'
             }
         )
         print(f"✅ Created price: $0 (Lookup Key: {free_price.lookup_key})")
@@ -53,8 +59,8 @@ def setup_stripe_products():
         # Product 2: Pro Haiku
         print("\n2️⃣ Creating Pro Haiku Product...")
         haiku_product = stripe.Product.create(
-            name="RgentAI Pro Haiku",
-            description="Pro plan with Claude 3.5 Haiku - Fastest & most cost-effective. Perfect for simple tasks & high volume.",
+            name="RgentAI Pro (Haiku)",
+            description="Pro plan with Claude 3.5 Haiku – Fastest & most cost-effective. Perfect for simple tasks & high volume.",
             metadata={
                 'plan_type': 'pro_haiku',
                 'pricing_model': 'subscription_plus_tokens',
@@ -93,13 +99,18 @@ def setup_stripe_products():
         # Product 3: Pro Sonnet
         print("\n3️⃣ Creating Pro Sonnet Product...")
         sonnet_product = stripe.Product.create(
-            name="RgentAI Pro Sonnet",
-            description="Pro plan with Sonnet model - pay per token pricing",
+            name="RgentAI Pro (Sonnet)",
+            description="Pro plan with Claude 3.5 Sonnet – Advanced reasoning & coding. Perfect for complex analysis.",
             metadata={
                 'plan_type': 'pro_sonnet',
-                'pricing_model': 'pay_per_token',
+                'pricing_model': 'subscription_plus_tokens',
                 'model': 'sonnet',
-                'monthly_budget': '100.0'
+                'monthly_subscription': '10.0',
+                'input_token_rate': '0.005',
+                'output_token_rate': '0.02',
+                'tokens_per_1000_input': '0.005',
+                'tokens_per_1000_output': '0.02',
+                'estimated_prompts_per_10_dollars': '400'
             }
         )
         print(f"✅ Created product: {sonnet_product.name} (ID: {sonnet_product.id})")
@@ -107,29 +118,35 @@ def setup_stripe_products():
         # Pro Sonnet Price
         sonnet_price = stripe.Price.create(
             product=sonnet_product.id,
-            unit_amount=2000,  # $20.00
+            unit_amount=1000,  # $10.00 (same as Haiku)
             currency='usd',
             recurring={'interval': 'month'},
             lookup_key='pro_sonnet_monthly_base',
             metadata={
                 'plan_type': 'pro_sonnet',
-                'requests': '1000',
-                'model': 'sonnet'
+                'pricing_model': 'subscription_plus_tokens',
+                'model': 'sonnet',
+                'monthly_subscription': '10.0',
+                'input_token_rate': '0.005',
+                'output_token_rate': '0.02',
+                'tokens_per_1000_input': '0.005',
+                'tokens_per_1000_output': '0.02',
+                'estimated_prompts_per_10_dollars': '400'
             }
         )
-        print(f"✅ Created price: $20/month (Lookup Key: {sonnet_price.lookup_key})")
+        print(f"✅ Created price: $10/month (Lookup Key: {sonnet_price.lookup_key})")
         
         print("\n" + "=" * 50)
         print("✅ All products and prices created successfully!")
         
         # Summary
         print("\n📋 Summary:")
-        print(f"   • Free Plan: {free_product.name} - $0 (pay per token)")
+        print(f"   • Free Trial: {free_product.name} - $0 (50 requests, one-time)")
         print(f"   • Pro Haiku: {haiku_product.name} - $10/month + pay per token")
-        print(f"   • Pro Sonnet: {sonnet_product.name} - $20/month + pay per token")
+        print(f"   • Pro Sonnet: {sonnet_product.name} - $10/month + pay per token")
         print(f"   • Lookup Keys: {free_price.lookup_key}, {haiku_price.lookup_key}, {sonnet_price.lookup_key}")
-        print(f"   • Haiku Token Rates: $0.0013/1K input, $0.0065/1K output")
-        print(f"   • Estimated: ~1,500 prompts for $10 in tokens (Haiku)")
+        print(f"   • Haiku Token Rates: $0.0013/1K input, $0.0065/1K output (~1,500 prompts/$10)")
+        print(f"   • Sonnet Token Rates: $0.005/1K input, $0.02/1K output (~400 prompts/$10)")
         
         return True
         

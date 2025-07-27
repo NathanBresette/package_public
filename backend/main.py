@@ -1403,7 +1403,10 @@ async def create_account(request: CreateAccountRequest):
         access_code = user_manager.generate_access_code()
         
         # Determine plan settings based on plan_type (subscription + pay-per-token model)
-        if request.plan_type == 'free':
+        if request.plan_type == 'free_trial':
+            daily_limit = 50  # 50 requests for free trial
+            monthly_budget = 0.0  # No budget for free trial
+        elif request.plan_type == 'free':
             daily_limit = 1000  # High limit for free tier
             monthly_budget = 5.0
         elif request.plan_type == 'pro_haiku':
@@ -1482,7 +1485,11 @@ async def stripe_webhook(request: Request):
                 lookup_key = subscription.metadata.get('lookup_key', '')
                 if lookup_key:
                     # New lookup key approach (pay-per-token model)
-                    if 'haiku' in lookup_key:
+                    if 'free_trial' in lookup_key:
+                        plan_type = 'free_trial'
+                        daily_limit = 50  # 50 requests for free trial
+                        monthly_budget = 0.0  # No budget for free trial
+                    elif 'haiku' in lookup_key:
                         plan_type = 'pro_haiku'
                         daily_limit = 10000  # Very high limit - users pay per token
                         monthly_budget = 100.0  # Higher budget for token usage
