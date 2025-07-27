@@ -1852,6 +1852,39 @@ async def renew_subscription(request: SignInRequest):
         print(f"Renew subscription error: {e}")
         raise HTTPException(status_code=500, detail="Failed to renew subscription")
 
+@app.get("/debug/stripe")
+async def debug_stripe_config():
+    """Debug endpoint to check Stripe configuration"""
+    try:
+        stripe_secret = os.getenv("STRIPE_SECRET_KEY")
+        webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+        claude_key = os.getenv("CLAUDE_API_KEY")
+        
+        debug_info = {
+            "stripe_secret_key_set": stripe_secret is not None,
+            "stripe_secret_key_preview": stripe_secret[:10] + "..." if stripe_secret else None,
+            "webhook_secret_set": webhook_secret is not None,
+            "webhook_secret_preview": webhook_secret[:10] + "..." if webhook_secret else None,
+            "claude_key_set": claude_key is not None,
+            "claude_key_preview": claude_key[:10] + "..." if claude_key else None,
+        }
+        
+        # Test Stripe connection if secret is set
+        if stripe_secret:
+            try:
+                stripe.api_key = stripe_secret
+                customers = stripe.Customer.list(limit=1)
+                debug_info["stripe_connection"] = "✅ Success"
+            except Exception as e:
+                debug_info["stripe_connection"] = f"❌ Failed: {str(e)}"
+        else:
+            debug_info["stripe_connection"] = "❌ No secret key"
+        
+        return debug_info
+        
+    except Exception as e:
+        return {"error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000) 
