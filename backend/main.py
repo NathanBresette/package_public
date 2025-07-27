@@ -162,8 +162,7 @@ class PaymentSuccessRequest(BaseModel):
     customer_email: str
     plan_type: str
 
-class AccessCodeRecoveryRequest(BaseModel):
-    email: str
+
 
 class CreateAccountRequest(BaseModel):
     email: str
@@ -1422,7 +1421,7 @@ async def create_stripe_checkout(request: LookupKeyRequest):
         raise HTTPException(status_code=500, detail=f"Payment setup failed: {str(e)}")
 
 @app.post("/api/create-customer-portal-session")
-async def create_customer_portal_session(request: AccessCodeRecoveryRequest):
+async def create_customer_portal_session(request: CreateAccountRequest):
     """Create Stripe Customer Portal session for account management"""
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=500, detail="Stripe not configured")
@@ -1457,46 +1456,7 @@ async def create_customer_portal_session(request: AccessCodeRecoveryRequest):
         print(f"Customer portal error: {e}")
         raise HTTPException(status_code=500, detail="Failed to create customer portal session")
 
-@app.post("/api/recover-access-code")
-async def recover_access_code(request: AccessCodeRecoveryRequest):
-    """Recover access code using email - PII-free approach"""
-    if not STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=500, detail="Stripe not configured")
-    
-    try:
-        # Find Stripe customer by email
-        customers = stripe.Customer.list(email=request.email, limit=1)
-        
-        if not customers.data:
-            raise HTTPException(status_code=404, detail="No account found with this email address")
-        
-        customer = customers.data[0]
-        
-        # Find user by Stripe customer ID
-        user = user_manager.get_user_by_stripe_customer_id(customer.id)
-        
-        if not user:
-            raise HTTPException(status_code=404, detail="Account not found. Please create an account first.")
-        
-        if not user.is_active:
-            raise HTTPException(status_code=400, detail="Account is disabled. Please contact support.")
-        
-        # Send access code via email (you can implement email sending here)
-        # For now, just return the access code
-        return {
-            "success": True,
-            "access_code": user.access_code,
-            "message": "Access code sent to your email address"
-        }
-        
-    except stripe.error.StripeError as e:
-        print(f"Stripe error: {e}")
-        raise HTTPException(status_code=400, detail=f"Recovery error: {str(e)}")
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Access code recovery error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to recover access code")
+
 
 @app.post("/api/create-account")
 async def create_account(request: CreateAccountRequest, response: Response):
@@ -1528,6 +1488,12 @@ async def create_account(request: CreateAccountRequest, response: Response):
         else:  # pro
             daily_limit = 5000  # High limit for pay-per-token
             monthly_budget = 50.0
+        
+        # Store access code in Stripe customer metadata
+        stripe.Customer.modify(
+            customer.id,
+            metadata={'access_code': access_code}
+        )
         
         # Create user with Stripe customer ID - NO PII stored
         success = user_manager.create_user(
