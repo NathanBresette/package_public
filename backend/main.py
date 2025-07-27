@@ -1409,15 +1409,15 @@ async def create_stripe_checkout(request: LookupKeyRequest):
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url='https://rgentai.com/dashboard?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url='https://rgentai.com/plans?cancelled=true',
+            success_url='https://rgentaipaymentfrontend-6mah5bcp1-nathanbresettes-projects.vercel.app/success.html?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url='https://rgentaipaymentfrontend-6mah5bcp1-nathanbresettes-projects.vercel.app/plans.html?cancelled=true',
             metadata={
                 'lookup_key': request.lookup_key,
                 'customer_email': request.customer_email or ''
             }
         )
         
-        return {"id": checkout_session.id}
+        return {"url": checkout_session.url}
         
     except Exception as e:
         print(f"Error creating Stripe checkout session: {str(e)}")
