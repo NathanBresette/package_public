@@ -1342,8 +1342,8 @@ async def create_stripe_checkout(request: LookupKeyRequest):
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url='https://rgentaipaymentfrontend-d7z59ufy0-nathanbresettes-projects.vercel.app/dashboard?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url='https://rgentaipaymentfrontend-d7z59ufy0-nathanbresettes-projects.vercel.app/plans?cancelled=true',
+            success_url='https://rgentai.com/dashboard?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url='https://rgentai.com/plans?cancelled=true',
             metadata={
                 'lookup_key': request.lookup_key,
                 'customer_email': request.customer_email or ''
@@ -2061,8 +2061,8 @@ async def test_checkout_creation(request: LookupKeyRequest):
                     'quantity': 1,
                 }],
                 mode='subscription',
-                success_url='https://rgentaipaymentfrontend-d7z59ufy0-nathanbresettes-projects.vercel.app/dashboard?session_id={CHECKOUT_SESSION_ID}',
-                cancel_url='https://rgentaipaymentfrontend-d7z59ufy0-nathanbresettes-projects.vercel.app/plans?cancelled=true',
+                success_url='https://rgentai.com/dashboard?session_id={CHECKOUT_SESSION_ID}',
+                cancel_url='https://rgentai.com/plans?cancelled=true',
                 metadata={
                     'lookup_key': request.lookup_key,
                     'customer_email': request.customer_email or ''
