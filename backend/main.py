@@ -1896,6 +1896,82 @@ async def debug_stripe_config():
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/debug/stripe-products")
+async def debug_stripe_products():
+    """Debug endpoint to check Stripe products and prices"""
+    try:
+        stripe_secret = os.getenv("STRIPE_SECRET_KEY")
+        if not stripe_secret:
+            return {"error": "STRIPE_SECRET_KEY not set"}
+        
+        stripe.api_key = stripe_secret
+        
+        debug_info = {
+            "products": [],
+            "prices": [],
+            "required_lookup_keys": {}
+        }
+        
+        # Get all products
+        products = stripe.Product.list(limit=10)
+        for product in products.data:
+            debug_info["products"].append({
+                "name": product.name,
+                "id": product.id,
+                "active": product.active,
+                "metadata": product.metadata
+            })
+        
+        # Get all prices
+        prices = stripe.Price.list(limit=20)
+        for price in prices.data:
+            debug_info["prices"].append({
+                "nickname": price.nickname,
+                "id": price.id,
+                "product": price.product,
+                "active": price.active,
+                "unit_amount": price.unit_amount,
+                "currency": price.currency,
+                "recurring": price.recurring,
+                "lookup_key": price.lookup_key,
+                "metadata": price.metadata
+            })
+        
+        # Check for specific lookup keys we need
+        required_keys = [
+            'free_trial_monthly',
+            'pro_haiku_monthly_base', 
+            'pro_haiku_input_tokens',
+            'pro_haiku_output_tokens',
+            'pro_sonnet_monthly_base',
+            'pro_sonnet_input_tokens', 
+            'pro_sonnet_output_tokens'
+        ]
+        
+        for key in required_keys:
+            try:
+                price = stripe.Price.retrieve(key)
+                debug_info["required_lookup_keys"][key] = {
+                    "found": True,
+                    "id": price.id,
+                    "active": price.active
+                }
+            except stripe.error.InvalidRequestError:
+                debug_info["required_lookup_keys"][key] = {
+                    "found": False,
+                    "error": "Not found"
+                }
+            except Exception as e:
+                debug_info["required_lookup_keys"][key] = {
+                    "found": False,
+                    "error": str(e)
+                }
+        
+        return debug_info
+        
+    except Exception as e:
+        return {"error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000) 
