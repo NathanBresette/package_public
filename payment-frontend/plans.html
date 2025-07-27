@@ -47,13 +47,7 @@
         .success { color: #27ae60; background: #f0f9f4; padding: 15px; border-radius: 10px; margin: 20px 0; display: none; }
         @media (max-width: 768px) { .header h1 { font-size: 2rem; } .pricing-card { padding: 30px 20px; } .features-section { padding: 30px 20px; } }
     </style>
-    <script src="session.js"></script>
-    <script>
-        // Check if user is logged in and update navigation
-        document.addEventListener('DOMContentLoaded', function() {
-            updateNavigation();
-        });
-    </script>
+
 </head>
 <body>
     <div class="navbar">
@@ -64,8 +58,7 @@
             <a href="installation.html">Installation</a>
             <a href="data-security.html">Data Security</a>
             <a href="updates.html">Dev Updates</a>
-            <a href="signin.html" id="signinLink">Sign In</a>
-            <a href="dashboard.html" id="dashboardLink" style="display: none;">Dashboard</a>
+            <a href="signin.html">Account</a>
         </nav>
     </div>
     <div class="container">

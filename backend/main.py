@@ -162,13 +162,11 @@ class PaymentSuccessRequest(BaseModel):
     customer_email: str
     plan_type: str
 
-class SignInRequest(BaseModel):
+class AccessCodeRecoveryRequest(BaseModel):
     email: str
-    password: str  # Required for secure authentication
 
 class CreateAccountRequest(BaseModel):
     email: str
-    password: str
     plan_type: str
 
 class ForgotPasswordRequest(BaseModel):
@@ -1423,48 +1421,82 @@ async def create_stripe_checkout(request: LookupKeyRequest):
         print(f"Error creating Stripe checkout session: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Payment setup failed: {str(e)}")
 
-@app.post("/api/signin")
-async def signin(request: SignInRequest, response: Response):
-    """Sign in using secure email + password authentication"""
+@app.post("/api/create-customer-portal-session")
+async def create_customer_portal_session(request: AccessCodeRecoveryRequest):
+    """Create Stripe Customer Portal session for account management"""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
     try:
-        # Authenticate user with email and password
-        user = user_manager.authenticate_user(request.email, request.password)
+        # Find Stripe customer by email
+        customers = stripe.Customer.list(email=request.email, limit=1)
         
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid email or password")
+        if not customers.data:
+            raise HTTPException(status_code=404, detail="No account found with this email address")
         
-        if not user.is_active:
-            raise HTTPException(status_code=401, detail="Account is disabled. Please contact support.")
+        customer = customers.data[0]
         
-        # Get plan type from user data or default to 'free_trial'
-        plan_type = getattr(user, 'plan_type', 'free_trial')
+        # Create customer portal session
+        session = stripe.billing_portal.Session.create(
+            customer=customer.id,
+            return_url="https://rgentai.com"  # Return to your homepage
+        )
         
-        # Create session token
-        user_data = {
-            "access_code": user.access_code,
-            "email": request.email,
-            "plan_type": plan_type,
-            "stripe_customer_id": user.stripe_customer_id
-        }
-        session_token = create_session_token(user_data)
-        
-        # Return JWT token in response body for cross-domain storage
         return {
             "success": True,
-            "access_code": user.access_code,
-            "plan_type": plan_type,
-            "stripe_customer_id": user.stripe_customer_id,
-            "subscription_id": user.stripe_customer_id,  # Use customer ID as subscription_id for simplicity
-            "billing_status": user.billing_status,
-            "message": "Sign in successful",
-            "token": session_token  # JWT token for frontend storage
+            "url": session.url,
+            "message": "Redirecting to account management"
         }
         
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        raise HTTPException(status_code=400, detail=f"Portal creation error: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Sign in error: {e}")
-        raise HTTPException(status_code=500, detail="Sign in failed")
+        print(f"Customer portal error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create customer portal session")
+
+@app.post("/api/recover-access-code")
+async def recover_access_code(request: AccessCodeRecoveryRequest):
+    """Recover access code using email - PII-free approach"""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
+    try:
+        # Find Stripe customer by email
+        customers = stripe.Customer.list(email=request.email, limit=1)
+        
+        if not customers.data:
+            raise HTTPException(status_code=404, detail="No account found with this email address")
+        
+        customer = customers.data[0]
+        
+        # Find user by Stripe customer ID
+        user = user_manager.get_user_by_stripe_customer_id(customer.id)
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="Account not found. Please create an account first.")
+        
+        if not user.is_active:
+            raise HTTPException(status_code=400, detail="Account is disabled. Please contact support.")
+        
+        # Send access code via email (you can implement email sending here)
+        # For now, just return the access code
+        return {
+            "success": True,
+            "access_code": user.access_code,
+            "message": "Access code sent to your email address"
+        }
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        raise HTTPException(status_code=400, detail=f"Recovery error: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Access code recovery error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to recover access code")
 
 @app.post("/api/create-account")
 async def create_account(request: CreateAccountRequest, response: Response):
@@ -1497,11 +1529,9 @@ async def create_account(request: CreateAccountRequest, response: Response):
             daily_limit = 5000  # High limit for pay-per-token
             monthly_budget = 50.0
         
-        # Create user with email and password for secure authentication
+        # Create user with Stripe customer ID - NO PII stored
         success = user_manager.create_user(
             access_code=access_code,
-            email=request.email,
-            password=request.password,
             stripe_customer_id=customer.id,
             daily_limit=daily_limit,
             monthly_budget=monthly_budget

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RgentAI - Customer Portal</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: #333; 
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .navbar { 
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 24px 40px 16px 40px; 
+            background: rgba(255,255,255,0.95); 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
+            z-index: 10; 
+        }
+        
+        .navbar .logo { 
+            font-size: 1.7rem; 
+            font-weight: 700; 
+            color: #667eea; 
+            letter-spacing: 1px; 
+        }
+        
+        .navbar nav a { 
+            margin-left: 32px; 
+            color: #333; 
+            text-decoration: none; 
+            font-weight: 500; 
+            transition: color 0.2s; 
+        }
+        
+        .navbar nav a:hover { 
+            color: #764ba2; 
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            margin-top: 80px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .features {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .features h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .features ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .features li {
+            margin-bottom: 8px;
+            color: #666;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 700px) { 
+            .navbar { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                padding: 18px 12px; 
+            } 
+            .navbar nav a { 
+                margin-left: 18px; 
+            } 
+            .container {
+                margin: 60px 20px 20px 20px;
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">RgentAI</div>
+        <nav>
+            <a href="homepage.html">Home</a>
+            <a href="plans.html">Plans & Pricing</a>
+            <a href="installation.html">Installation</a>
+            <a href="data-security.html">Data Security</a>
+            <a href="updates.html">Dev Updates</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Customer Portal</h1>
+            <p>Manage your RgentAI account and billing</p>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <form id="portalForm" onsubmit="createPortalSession(event)">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="Enter your email address" required>
+            </div>
+            
+            <button type="submit" class="btn" id="portalBtn">Access Customer Portal</button>
+        </form>
+
+        <div class="features">
+            <h3>What you can do in the Customer Portal:</h3>
+            <ul>
+                <li>View and update billing information</li>
+                <li>Download invoices and receipts</li>
+                <li>Update payment methods</li>
+                <li>Cancel or modify subscriptions</li>
+                <li>View account history</li>
+                <li>Update contact information</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>Forgot your access code? <a href="access-code-recovery.html">Recover it here</a></p>
+            <p>Need help? <a href="mailto:support@rgentai.com">Contact support</a></p>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://rgent.onrender.com';
+
+        async function createPortalSession(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const portalBtn = document.getElementById('portalBtn');
+            
+            // Show loading state
+            portalBtn.disabled = true;
+            portalBtn.textContent = 'Redirecting...';
+            hideMessage();
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/create-customer-portal-session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Redirect to Stripe Customer Portal
+                    window.location.href = data.url;
+                } else {
+                    showMessage(data.detail || 'Failed to create portal session', 'error');
+                    // Reset button
+                    portalBtn.disabled = false;
+                    portalBtn.textContent = 'Access Customer Portal';
+                }
+            } catch (error) {
+                console.error('Portal error:', error);
+                showMessage('Failed to create portal session. Please try again.', 'error');
+                // Reset button
+                portalBtn.disabled = false;
+                portalBtn.textContent = 'Access Customer Portal';
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+        }
+
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+    </script>
+</body>
+</html> 

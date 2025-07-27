@@ -29,13 +29,7 @@
         .footer { text-align: center; color: #fff; opacity: 0.85; margin-top: 60px; padding: 32px 0 16px 0; font-size: 1rem; }
         @media (max-width: 700px) { .navbar { flex-direction: column; align-items: flex-start; padding: 18px 12px; } .navbar nav a { margin-left: 18px; } .header h1 { font-size: 2rem; } .features-section { padding: 30px 20px; } }
     </style>
-    <script src="session.js"></script>
-    <script>
-        // Check if user is logged in and update navigation
-        document.addEventListener('DOMContentLoaded', function() {
-            updateNavigation();
-        });
-    </script>
+
 </head>
 <body>
     <div class="navbar">
@@ -46,8 +40,7 @@
             <a href="installation.html">Installation</a>
             <a href="data-security.html">Data Security</a>
             <a href="updates.html">Dev Updates</a>
-            <a href="signin.html" id="signinLink">Sign In</a>
-            <a href="dashboard.html" id="dashboardLink" style="display: none;">Dashboard</a>
+            <a href="signin.html">Account</a>
         </nav>
     </div>
     
