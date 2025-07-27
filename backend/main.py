@@ -1379,7 +1379,7 @@ async def create_checkout_session(request: CreateCheckoutSessionRequest):
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url='https://rgentai.com/dashboard?session_id={CHECKOUT_SESSION_ID}',
+            success_url='https://rgentai.com/success.html?session_id={CHECKOUT_SESSION_ID}',
             cancel_url='https://rgentai.com/plans?cancelled=true',
             metadata={
                 'plan_type': request.plan_type,
