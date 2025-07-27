@@ -2131,19 +2131,19 @@ async def test_checkout_creation(request: LookupKeyRequest):
         
         # Step 2: Create checkout session
         try:
-                    checkout_session = stripe.checkout.Session.create(
-            line_items=[{
-                'price': prices.data[0].id,
-                'quantity': 1,
-            }],
-            mode='subscription',
-            success_url='https://rgentai.com/success.html?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url='https://rgentai.com/plans?cancelled=true',
-            metadata={
-                'lookup_key': request.lookup_key,
-                'customer_email': request.customer_email or ''
-            }
-        )
+            checkout_session = stripe.checkout.Session.create(
+                line_items=[{
+                    'price': prices.data[0].id,
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                success_url='https://rgentai.com/success.html?session_id={CHECKOUT_SESSION_ID}',
+                cancel_url='https://rgentai.com/plans?cancelled=true',
+                metadata={
+                    'lookup_key': request.lookup_key,
+                    'customer_email': request.customer_email or ''
+                }
+            )
             
             debug_info["steps"]["checkout_creation"] = {
                 "success": True,
