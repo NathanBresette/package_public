@@ -28,26 +28,12 @@
         .footer { text-align: center; color: #fff; opacity: 0.85; margin-top: 60px; padding: 32px 0 16px 0; font-size: 1rem; }
         @media (max-width: 700px) { .navbar { flex-direction: column; align-items: flex-start; padding: 18px 12px; } .navbar nav a { margin-left: 18px; } .hero h1 { font-size: 2rem; } .features-section { padding: 24px 6px; } }
     </style>
+    <script src="session.js"></script>
     <script>
         // Check if user is logged in and update navigation
-        function updateNavigation() {
-            const userData = localStorage.getItem('user');
-            const signinLink = document.getElementById('signinLink');
-            const dashboardLink = document.getElementById('dashboardLink');
-            
-            if (userData) {
-                // User is logged in
-                signinLink.style.display = 'none';
-                dashboardLink.style.display = 'inline';
-            } else {
-                // User is not logged in
-                signinLink.style.display = 'inline';
-                dashboardLink.style.display = 'none';
-            }
-        }
-        
-        // Run on page load
-        document.addEventListener('DOMContentLoaded', updateNavigation);
+        document.addEventListener('DOMContentLoaded', async function() {
+            await updateNavigation();
+        });
     </script>
 </head>
 <body>

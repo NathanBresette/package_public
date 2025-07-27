@@ -385,6 +385,13 @@
         </div>
     </div>
 
+    <script src="session.js"></script>
     <script src="dashboard.js"></script>
+    <script>
+        // Check if user is logged in and update navigation
+        document.addEventListener('DOMContentLoaded', async function() {
+            await updateNavigation();
+        });
+    </script>
 </body>
 </html> 

@@ -47,26 +47,12 @@
         .success { color: #27ae60; background: #f0f9f4; padding: 15px; border-radius: 10px; margin: 20px 0; display: none; }
         @media (max-width: 768px) { .header h1 { font-size: 2rem; } .pricing-card { padding: 30px 20px; } .features-section { padding: 30px 20px; } }
     </style>
+    <script src="session.js"></script>
     <script>
         // Check if user is logged in and update navigation
-        function updateNavigation() {
-            const userData = localStorage.getItem('user');
-            const signinLink = document.getElementById('signinLink');
-            const dashboardLink = document.getElementById('dashboardLink');
-            
-            if (userData) {
-                // User is logged in
-                signinLink.style.display = 'none';
-                dashboardLink.style.display = 'inline';
-            } else {
-                // User is not logged in
-                signinLink.style.display = 'inline';
-                dashboardLink.style.display = 'none';
-            }
-        }
-        
-        // Run on page load
-        document.addEventListener('DOMContentLoaded', updateNavigation);
+        document.addEventListener('DOMContentLoaded', async function() {
+            await updateNavigation();
+        });
     </script>
 </head>
 <body>

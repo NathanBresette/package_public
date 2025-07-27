@@ -73,6 +73,7 @@
 
     <!-- Stripe.js library -->
     <script src="https://js.stripe.com/v3/"></script>
+    <script src="session.js"></script>
     
     <script>
         const BACKEND_URL = 'https://rgent.onrender.com';
@@ -117,13 +118,14 @@
                 const response = await fetch(`${BACKEND_URL}/api/signin`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', // Include cookies
                     body: JSON.stringify({ email, password })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Store user data
+                    // Store user data for backward compatibility
                     localStorage.setItem('user', JSON.stringify(data.user));
                     // Redirect to dashboard
                     window.location.href = 'dashboard.html';
@@ -151,6 +153,7 @@
                 const accountResponse = await fetch(`${BACKEND_URL}/api/create-account`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', // Include cookies
                     body: JSON.stringify({ 
                         email, 
                         password, 
@@ -173,6 +176,7 @@
                         const paymentResponse = await fetch(`${BACKEND_URL}/api/create-stripe-checkout`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include', // Include cookies
                             body: JSON.stringify({
                                 lookup_key: lookupKey,
                                 customer_email: email

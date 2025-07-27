@@ -7,22 +7,20 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
-// Load user data from localStorage
-function loadUserData() {
-    const userDataString = localStorage.getItem('user');
-    
-    if (!userDataString) {
-        // No user data found, redirect to signin
-        window.location.href = 'signin.html';
-        return;
-    }
-
+// Load user data from session
+async function loadUserData() {
     try {
-        userData = JSON.parse(userDataString);
+        userData = await getCurrentUser();
+        
+        if (!userData) {
+            // No valid session, redirect to signin
+            window.location.href = 'signin.html';
+            return;
+        }
+        
         updateDashboard(userData);
     } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('user');
+        console.error('Error loading user data:', error);
         window.location.href = 'signin.html';
     }
 }
@@ -128,9 +126,8 @@ async function copyAccessCode() {
 }
 
 // Sign out function
-function signOut() {
-    localStorage.removeItem('user');
-    window.location.href = 'signin.html';
+async function signOut() {
+    await logout();
 }
 
 // Account management functions

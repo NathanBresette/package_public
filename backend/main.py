@@ -1,5 +1,5 @@
 # Force rebuild: Fix WORKDIR and PYTHONPATH
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -23,6 +23,12 @@ import secrets
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import uuid
+import hashlib
+import time
+from psycopg2.extras import RealDictCursor
+import jwt
+from contextlib import asynccontextmanager
 
 app = FastAPI(title="RStudio AI Backend", version="1.3.0")
 
@@ -1357,8 +1363,8 @@ async def create_stripe_checkout(request: LookupKeyRequest):
         raise HTTPException(status_code=500, detail=f"Payment setup failed: {str(e)}")
 
 @app.post("/api/signin")
-async def signin(request: SignInRequest):
-    """Sign in using Stripe customer management - NO PII stored locally"""
+async def signin(request: SignInRequest, response: Response):
+    """Sign in using Stripe customer management with secure session cookies"""
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=500, detail="Stripe not configured")
     
@@ -1380,11 +1386,30 @@ async def signin(request: SignInRequest):
         if not user.is_active:
             raise HTTPException(status_code=401, detail="Account is disabled")
         
-        # Return user data (no password verification needed - Stripe handles authentication)
         # Get plan type from customer metadata, fallback to 'free' if not set
         plan_type = 'free'  # default
         if customer.metadata and 'plan_type' in customer.metadata:
             plan_type = customer.metadata.get('plan_type')
+        
+        # Create session token
+        user_data = {
+            "access_code": user.access_code,
+            "email": request.email,
+            "plan_type": plan_type,
+            "stripe_customer_id": customer.id
+        }
+        session_token = create_session_token(user_data)
+        
+        # Set secure HTTP-only cookie
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=True,  # Only send over HTTPS
+            samesite="lax",  # Allow cross-site requests from same site
+            max_age=SESSION_EXPIRY_HOURS * 3600,  # Convert hours to seconds
+            path="/"  # Available across all paths
+        )
         
         return {
             "success": True,
@@ -1406,8 +1431,8 @@ async def signin(request: SignInRequest):
         raise HTTPException(status_code=500, detail="Sign in failed")
 
 @app.post("/api/create-account")
-async def create_account(request: CreateAccountRequest):
-    """Create a new account with Stripe customer management - NO PII stored locally"""
+async def create_account(request: CreateAccountRequest, response: Response):
+    """Create a new account with Stripe customer management and secure session cookies"""
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=500, detail="Stripe not configured")
     
@@ -1448,6 +1473,26 @@ async def create_account(request: CreateAccountRequest):
             # Clean up Stripe customer if user creation failed
             stripe.Customer.delete(customer.id)
             raise HTTPException(status_code=500, detail="Failed to create user account")
+        
+        # Create session token
+        user_data = {
+            "access_code": access_code,
+            "email": request.email,
+            "plan_type": request.plan_type,
+            "stripe_customer_id": customer.id
+        }
+        session_token = create_session_token(user_data)
+        
+        # Set secure HTTP-only cookie
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=True,  # Only send over HTTPS
+            samesite="lax",  # Allow cross-site requests from same site
+            max_age=SESSION_EXPIRY_HOURS * 3600,  # Convert hours to seconds
+            path="/"  # Available across all paths
+        )
         
         # Return success with access code and user object
         return {
@@ -2001,6 +2046,33 @@ async def debug_stripe_products():
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/api/logout")
+async def logout(response: Response):
+    """Logout user by clearing session cookie"""
+    # Clear the session cookie
+    response.delete_cookie(
+        key="session_token",
+        path="/"
+    )
+    return {"success": True, "message": "Logged out successfully"}
+
+@app.get("/api/session")
+async def get_session(request: Request):
+    """Get current session information"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No valid session")
+    
+    return {
+        "success": True,
+        "user": {
+            "access_code": user.get("user_id"),
+            "email": user.get("email"),
+            "plan_type": user.get("plan_type"),
+            "stripe_customer_id": user.get("stripe_customer_id")
+        }
+    }
+
 @app.post("/debug/test-checkout")
 async def test_checkout_creation(request: LookupKeyRequest):
     """Debug endpoint to test checkout session creation"""
@@ -2085,6 +2157,38 @@ async def test_checkout_creation(request: LookupKeyRequest):
         
     except Exception as e:
         return {"error": str(e)}
+
+# Session management
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+SESSION_EXPIRY_HOURS = 24
+
+def create_session_token(user_data: dict) -> str:
+    """Create a JWT session token"""
+    payload = {
+        "user_id": user_data.get("access_code"),
+        "email": user_data.get("email"),
+        "plan_type": user_data.get("plan_type"),
+        "exp": datetime.utcnow() + timedelta(hours=SESSION_EXPIRY_HOURS),
+        "iat": datetime.utcnow()
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+def verify_session_token(token: str) -> Optional[dict]:
+    """Verify and decode JWT session token"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def get_current_user(request: Request) -> Optional[dict]:
+    """Get current user from session cookie"""
+    session_token = request.cookies.get("session_token")
+    if not session_token:
+        return None
+    return verify_session_token(session_token)
 
 if __name__ == "__main__":
     import uvicorn
