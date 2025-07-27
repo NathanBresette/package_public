@@ -1,5 +1,5 @@
 // Session Management using HTTP-only cookies
-const BACKEND_URL = 'https://rgent.onrender.com';
+// BACKEND_URL is defined in app.js
 
 // Check if user is logged in by calling the session endpoint
 async function checkSession() {

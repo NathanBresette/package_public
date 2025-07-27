@@ -177,6 +177,12 @@
 
     <script src="app.js"></script>
     <script>
+        // Make purchasePlan function globally available
+        window.purchasePlan = function(planType) {
+            // Redirect to signin page with plan type
+            window.location.href = `signin.html?plan=${planType}`;
+        };
+        
         function showContactForm() {
             document.getElementById('contactModal').style.display = 'block';
         }
