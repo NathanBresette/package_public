@@ -1425,9 +1425,7 @@ async def create_account(request: CreateAccountRequest):
         if request.plan_type == 'free_trial':
             daily_limit = 25  # 25 requests for free trial
             monthly_budget = 0.0  # No budget for free trial
-        elif request.plan_type == 'free':
-            daily_limit = 1000  # High limit for free tier
-            monthly_budget = 5.0
+
         elif request.plan_type == 'pro_haiku':
             daily_limit = 10000  # Very high limit - users pay per token
             monthly_budget = 100.0  # Higher budget for token usage

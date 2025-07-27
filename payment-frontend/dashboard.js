@@ -37,31 +37,64 @@ function updateDashboard(data) {
     document.getElementById('userEmail').textContent = data.email;
     
     // Update plan info
-    const planType = data.monthly_budget >= 10 ? 'Pro' : 'Free Trial';
-    document.getElementById('planName').textContent = planType + ' Plan';
-    document.getElementById('planDetails').textContent = 
-        `${data.daily_limit} requests per day`;
+    let planType = 'Free Trial';
+    let planDetails = `${data.daily_limit} requests (one-time trial)`;
     
-    // Update usage stats (mock for now - would come from backend)
-    const requestsUsed = Math.floor(Math.random() * 50); // Mock data
-    const requestsRemaining = Math.max(0, data.daily_limit - requestsUsed);
+    if (data.plan_type === 'pro_haiku') {
+        planType = 'Pro (Haiku)';
+        planDetails = '$10/month + pay per token';
+    } else if (data.plan_type === 'pro_sonnet') {
+        planType = 'Pro (Sonnet)';
+        planDetails = '$10/month + pay per token';
+    } else if (data.plan_type === 'free_trial') {
+        planType = 'Free Trial';
+        planDetails = `${data.daily_limit} requests (one-time trial)`;
+    }
+    
+    document.getElementById('planName').textContent = planType + ' Plan';
+    document.getElementById('planDetails').textContent = planDetails;
+    
+    // Update usage stats based on plan type
+    let requestsUsed = Math.floor(Math.random() * 10); // Mock data
+    let requestsRemaining = 0;
+    let daysLeft = '30';
+    
+    if (data.plan_type === 'free_trial') {
+        requestsRemaining = Math.max(0, data.daily_limit - requestsUsed);
+        daysLeft = 'Trial';
+    } else if (data.plan_type === 'pro_haiku' || data.plan_type === 'pro_sonnet') {
+        requestsUsed = 'Unlimited';
+        requestsRemaining = 'Unlimited';
+        daysLeft = 'Monthly';
+    } else {
+        requestsRemaining = Math.max(0, data.daily_limit - requestsUsed);
+        daysLeft = '30';
+    }
     
     document.getElementById('requestsUsed').textContent = requestsUsed;
     document.getElementById('requestsRemaining').textContent = requestsRemaining;
-    document.getElementById('daysLeft').textContent = '30'; // Mock data
+    document.getElementById('daysLeft').textContent = daysLeft;
     
-    // Update progress bar
-    const progressPercent = (requestsUsed / data.daily_limit) * 100;
-    document.getElementById('progressFill').style.width = `${Math.min(progressPercent, 100)}%`;
-    
-    // Update progress bar color based on usage
+    // Update progress bar based on plan type
     const progressFill = document.getElementById('progressFill');
-    if (progressPercent > 80) {
-        progressFill.style.background = '#e74c3c';
-    } else if (progressPercent > 60) {
-        progressFill.style.background = '#f39c12';
+    
+    if (data.plan_type === 'pro_haiku' || data.plan_type === 'pro_sonnet') {
+        // Unlimited plans - show full progress bar in green
+        progressFill.style.width = '100%';
+        progressFill.style.background = '#27ae60';
     } else {
-        progressFill.style.background = '#667eea';
+        // Limited plans - show actual usage
+        const progressPercent = (requestsUsed / data.daily_limit) * 100;
+        progressFill.style.width = `${Math.min(progressPercent, 100)}%`;
+        
+        // Update progress bar color based on usage
+        if (progressPercent > 80) {
+            progressFill.style.background = '#e74c3c';
+        } else if (progressPercent > 60) {
+            progressFill.style.background = '#f39c12';
+        } else {
+            progressFill.style.background = '#667eea';
+        }
     }
 }
 
