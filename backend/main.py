@@ -11,6 +11,7 @@ from memory_only_context import memory_context
 from context_summarizer import ContextSummarizer
 from response_cache import SmartResponseCache
 from conversation_memory import ConversationMemory
+from stripe_billing import report_token_usage, calculate_token_cost
 # from security_config import get_cors_config, ADMIN_ACCESS_CODE, get_security_headers
 from config import get_user_manager
 user_manager = get_user_manager()
@@ -594,6 +595,24 @@ async def chat_with_ai(request: ChatRequest):
             "context_summarized": context_summary is not None,
             "cached": False
         })
+        
+        # Report token usage to Stripe for billing (if customer has subscription)
+        try:
+            # Get user to find Stripe customer ID
+            user = user_manager.get_user_by_access_code(request.access_code)
+            if user and user.stripe_customer_id:
+                input_tokens = usage_info.get('input_tokens', 0)
+                output_tokens = usage_info.get('output_tokens', 0)
+                
+                # Report usage to Stripe
+                report_token_usage(
+                    user.stripe_customer_id,
+                    input_tokens,
+                    output_tokens
+                )
+        except Exception as e:
+            print(f"Error reporting token usage to Stripe: {e}")
+            # Don't fail the request if billing fails
         
         # Get context summary for response
         # context_summary_response = sqlite_rag.get_user_context_summary(request.access_code)
