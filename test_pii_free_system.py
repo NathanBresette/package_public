@@ -25,23 +25,29 @@ def test_stripe_connection():
         print(f"❌ Stripe connection failed: {e}")
         return False
 
-def create_test_customer():
-    """Create a test customer in Stripe"""
+def find_test_customer():
+    """Find existing test customer in Stripe"""
     try:
-        customer = stripe.Customer.create(
+        # Search for existing test customer
+        customers = stripe.Customer.list(
             email="test@example.com",
-            name="Test Customer",
-            description="Testing PII-free system",
-            metadata={
-                "plan_type": "free_trial",
-                "created_at": datetime.now().isoformat(),
-                "trial_requests_remaining": "25"
-            }
+            limit=1
         )
-        print(f"✅ Test customer created: {customer.id}")
-        return customer.id
+        
+        if customers.data:
+            customer = customers.data[0]
+            print(f"✅ Found existing test customer: {customer.id}")
+            return customer.id
+        else:
+            print("❌ No test customer found with email: test@example.com")
+            print("   Please create a test customer in Stripe Dashboard first:")
+            print("   1. Go to Stripe Dashboard → Customers")
+            print("   2. Click 'Add customer'")
+            print("   3. Email: test@example.com")
+            print("   4. Add metadata: plan_type=free_trial, trial_requests_remaining=25")
+            return None
     except Exception as e:
-        print(f"❌ Failed to create test customer: {e}")
+        print(f"❌ Failed to find test customer: {e}")
         return None
 
 def test_account_creation_with_stripe_id(customer_id):
@@ -179,13 +185,13 @@ def test_meter_reporting(customer_id):
         return False
 
 def cleanup_test_customer(customer_id):
-    """Clean up test customer"""
+    """Note: Test customer remains in Stripe for future testing"""
     try:
         if customer_id:
-            stripe.Customer.delete(customer_id)
-            print(f"✅ Test customer cleaned up: {customer_id}")
+            print(f"ℹ️  Test customer remains in Stripe: {customer_id}")
+            print("   You can delete it manually in Stripe Dashboard if needed")
     except Exception as e:
-        print(f"⚠️  Could not clean up test customer: {e}")
+        print(f"⚠️  Could not access test customer: {e}")
 
 def main():
     """Run complete PII-free system test"""
@@ -201,9 +207,9 @@ def main():
             print("❌ Cannot proceed without Stripe connection")
             return False
         
-        # Test 2: Create Test Customer
-        print("\n🧪 Test 2: Create Test Customer")
-        customer_id = create_test_customer()
+        # Test 2: Find Existing Test Customer
+        print("\n🧪 Test 2: Find Existing Test Customer")
+        customer_id = find_test_customer()
         if not customer_id:
             print("❌ Cannot proceed without test customer")
             return False
