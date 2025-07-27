@@ -214,6 +214,64 @@
             margin-top: 50px;
         }
 
+        /* Navigation styles */
+        .nav-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 15px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            color: #333;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background: #f8f9fa;
+            color: #667eea;
+        }
+
+        .nav-link.active {
+            background: #667eea;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .nav-bar {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .nav-links {
+                justify-content: center;
+            }
+        }
+
         .loading {
             text-align: center;
             padding: 40px;
@@ -252,6 +310,19 @@
 </head>
 <body>
     <div class="container">
+        <!-- Navigation Bar -->
+        <div class="nav-bar">
+            <a href="homepage.html" class="nav-logo">🚀 RgentAI</a>
+            <div class="nav-links">
+                <a href="homepage.html" class="nav-link">Home</a>
+                <a href="plans.html" class="nav-link">Pricing</a>
+                <a href="installation.html" class="nav-link">Installation</a>
+                <a href="data-security.html" class="nav-link">Security</a>
+                <a href="updates.html" class="nav-link">Updates</a>
+                <a href="dashboard.html" class="nav-link active">Dashboard</a>
+            </div>
+        </div>
+
         <div class="header">
             <h1>🎉 Welcome to RgentAI!</h1>
             <p class="welcome-message">Your AI assistant for RStudio is ready to use</p>
