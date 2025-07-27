@@ -160,9 +160,13 @@
                         // Free plan - redirect to dashboard
                         localStorage.setItem('user', JSON.stringify(accountData.user));
                         window.location.href = 'dashboard.html';
+                    } else if (plan === 'free_trial') {
+                        // Free trial - redirect to dashboard
+                        localStorage.setItem('user', JSON.stringify(accountData.user));
+                        window.location.href = 'dashboard.html';
                     } else {
                         // Paid plan - redirect to Stripe checkout
-                        const lookupKey = plan === 'pro_haiku' ? 'pro_haiku_monthly_base' : 'pro_sonnet_monthly_base';
+                        const lookupKey = plan === 'pro_haiku' ? 'pro_haiku_monthly_base_v3' : 'pro_sonnet_monthly_base_v3';
                         
                         const paymentResponse = await fetch(`${BACKEND_URL}/api/create-stripe-checkout`, {
                             method: 'POST',
