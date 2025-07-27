@@ -92,7 +92,7 @@ class CreateCheckoutSessionRequest(BaseModel):
     customer_email: Optional[str] = None
 
 class LookupKeyRequest(BaseModel):
-    lookup_key: str  # For Pro plans: 'pro_haiku_monthly_base' or 'pro_sonnet_monthly_base'
+    lookup_key: str  # For Pro plans: 'pro_haiku_monthly_base' or 'pro_sonnet_monthly_base_v2'
     customer_email: Optional[str] = None
 
 class PaymentSuccessRequest(BaseModel):
@@ -1943,9 +1943,9 @@ async def debug_stripe_products():
             'pro_haiku_monthly_base', 
             'pro_haiku_input_tokens',
             'pro_haiku_output_tokens',
-            'pro_sonnet_monthly_base',
-            'pro_sonnet_input_tokens', 
-            'pro_sonnet_output_tokens'
+            'pro_sonnet_monthly_base_v2',
+            'pro_sonnet_input_tokens_v2', 
+            'pro_sonnet_output_tokens_v2'
         ]
         
         # Get all prices to check lookup keys
