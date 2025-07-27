@@ -1423,7 +1423,7 @@ async def create_account(request: CreateAccountRequest):
         
         # Determine plan settings based on plan_type (subscription + pay-per-token model)
         if request.plan_type == 'free_trial':
-            daily_limit = 50  # 50 requests for free trial
+            daily_limit = 25  # 25 requests for free trial
             monthly_budget = 0.0  # No budget for free trial
         elif request.plan_type == 'free':
             daily_limit = 1000  # High limit for free tier
@@ -1498,7 +1498,7 @@ async def stripe_webhook(request: Request):
                 metadata={
                     'plan_type': 'free_trial',
                     'created_at': datetime.now().isoformat(),
-                    'trial_requests_remaining': '50'
+                    'trial_requests_remaining': '25'
                 }
             )
             print(f"✅ Set default metadata for customer: {customer.id}")
@@ -1566,7 +1566,7 @@ async def stripe_webhook(request: Request):
                     # New lookup key approach (pay-per-token model)
                     if 'free_trial' in lookup_key:
                         plan_type = 'free_trial'
-                        daily_limit = 50  # 50 requests for free trial
+                        daily_limit = 25  # 25 requests for free trial
                         monthly_budget = 0.0  # No budget for free trial
                     elif 'haiku' in lookup_key:
                         plan_type = 'pro_haiku'

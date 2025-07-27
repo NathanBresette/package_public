@@ -98,7 +98,7 @@ def calculate_token_cost(input_tokens: int, output_tokens: int, plan_type: str) 
     rates = {
         'pro_haiku': {
             'input_rate': 0.0013,  # per 1000 tokens
-            'output_rate': 0.0065
+            'output_rate': 0.00533  # Updated rate
         },
         'pro_sonnet': {
             'input_rate': 0.005,
