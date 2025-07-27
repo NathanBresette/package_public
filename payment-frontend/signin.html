@@ -43,10 +43,10 @@
             <div id="signin-form" style="margin-bottom: 30px;">
                 <div style="margin-bottom: 20px;">
                     <input type="email" id="email" placeholder="Enter your email" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 10px;">
-                    <input type="password" id="password" placeholder="Enter your password" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 10px;">
+                    <input type="password" id="password" placeholder="Enter your password (optional)" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 10px;">
                     <button class="btn" onclick="signIn()" style="width: 100%;">Sign In</button>
                     <div style="text-align: center; margin-top: 10px;">
-                        <a href="#" onclick="showForgotPassword(); return false;" style="color: #667eea; text-decoration: none; font-size: 0.9rem;">Forgot Password?</a>
+                        <small style="color: #666; font-size: 0.9rem;">Secure email-based authentication</small>
                     </div>
                 </div>
                 <p style="font-size: 0.9rem; color: #666; margin-top: 15px;">
@@ -57,7 +57,7 @@
             <div id="create-account-form" style="display: none; margin-bottom: 30px;">
                 <div style="margin-bottom: 20px;">
                     <input type="email" id="new-email" placeholder="Enter your email" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 10px;">
-                    <input type="password" id="new-password" placeholder="Create a password" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 15px;">
+                    <input type="password" id="new-password" placeholder="Create a password (optional)" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; margin-bottom: 15px;">
                     <button class="btn" onclick="createAccount()" style="width: 100%;">Create Account</button>
                 </div>
                 <p style="font-size: 0.9rem; color: #666; margin-top: 15px;">
@@ -111,10 +111,13 @@
             const email = DOMPurify.sanitize(document.getElementById('email').value);
             const password = document.getElementById('password').value;
             
-            if (!email || !password) {
-                alert('Please enter both email and password');
+            if (!email) {
+                alert('Please enter your email address');
                 return;
             }
+            
+            // In PII-free system, password is not required for authentication
+            // but we keep the field for user familiarity
             
             try {
                 const response = await fetch(`${BACKEND_URL}/api/signin`, {
@@ -127,7 +130,14 @@
                 
                 if (data.success) {
                     // Store user data and token
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                    // For signin, user data is returned directly, not nested under 'user'
+                    const userData = {
+                        access_code: data.access_code,
+                        email: email, // Use the email from the form
+                        plan_type: data.plan_type,
+                        stripe_customer_id: data.stripe_customer_id
+                    };
+                    localStorage.setItem('user', JSON.stringify(userData));
                     if (data.token) {
                         localStorage.setItem('auth_token', data.token);
                     }
@@ -147,10 +157,13 @@
             const password = document.getElementById('new-password').value;
             const plan = localStorage.getItem('selectedPlan');
             
-            if (!email || !password) {
-                alert('Please fill in all fields');
+            if (!email) {
+                alert('Please enter your email address');
                 return;
             }
+            
+            // In PII-free system, password is not required for authentication
+            // but we keep the field for user familiarity
             
             try {
                 // First create the account

@@ -256,27 +256,7 @@
             }
         }
     </style>
-    <script>
-        // Check if user is logged in and update navigation
-        function updateNavigation() {
-            const userData = localStorage.getItem('user');
-            const signinLink = document.getElementById('signinLink');
-            const dashboardLink = document.getElementById('dashboardLink');
-            
-            if (userData) {
-                // User is logged in
-                signinLink.style.display = 'none';
-                dashboardLink.style.display = 'inline';
-            } else {
-                // User is not logged in
-                signinLink.style.display = 'inline';
-                dashboardLink.style.display = 'none';
-            }
-        }
-        
-        // Run on page load
-        document.addEventListener('DOMContentLoaded', updateNavigation);
-    </script>
+
 </head>
 <body>
     <div class="container">
@@ -388,7 +368,7 @@
     <script src="session.js"></script>
     <script src="dashboard.js"></script>
     <script>
-        // Check if user is logged in and update navigation
+        // Update navigation when page loads
         document.addEventListener('DOMContentLoaded', function() {
             updateNavigation();
         });

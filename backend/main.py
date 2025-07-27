@@ -164,7 +164,7 @@ class PaymentSuccessRequest(BaseModel):
 
 class SignInRequest(BaseModel):
     email: str
-    password: str
+    password: str = ""  # Optional in PII-free system, not used for authentication
 
 class CreateAccountRequest(BaseModel):
     email: str
@@ -1425,16 +1425,16 @@ async def create_stripe_checkout(request: LookupKeyRequest):
 
 @app.post("/api/signin")
 async def signin(request: SignInRequest, response: Response):
-    """Sign in using Stripe customer management with secure session cookies"""
+    """Sign in using Stripe customer management - PII-free authentication"""
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=500, detail="Stripe not configured")
     
     try:
-        # Find Stripe customer by email
+        # Find Stripe customer by email (this is the authentication method in PII-free system)
         customers = stripe.Customer.list(email=request.email, limit=1)
         
         if not customers.data:
-            raise HTTPException(status_code=401, detail="Account not found")
+            raise HTTPException(status_code=401, detail="Account not found. Please create an account first.")
         
         customer = customers.data[0]
         
@@ -1442,13 +1442,13 @@ async def signin(request: SignInRequest, response: Response):
         user = user_manager.get_user_by_stripe_customer_id(customer.id)
         
         if not user:
-            raise HTTPException(status_code=401, detail="User account not found")
+            raise HTTPException(status_code=401, detail="User account not found. Please complete your account setup.")
         
         if not user.is_active:
-            raise HTTPException(status_code=401, detail="Account is disabled")
+            raise HTTPException(status_code=401, detail="Account is disabled. Please contact support.")
         
-        # Get plan type from customer metadata, fallback to 'free' if not set
-        plan_type = 'free'  # default
+        # Get plan type from customer metadata, fallback to 'free_trial' if not set
+        plan_type = 'free_trial'  # default
         if customer.metadata and 'plan_type' in customer.metadata:
             plan_type = customer.metadata.get('plan_type')
         
