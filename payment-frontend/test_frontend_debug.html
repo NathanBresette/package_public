@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Debug Test</title>
+</head>
+<body>
+    <h1>Frontend Session Debug Test</h1>
+    
+    <div id="status">Loading...</div>
+    
+    <button onclick="testCreateAccount()">Test Create Account</button>
+    <button onclick="testSession()">Test Session</button>
+    <button onclick="testSignIn()">Test Sign In</button>
+    
+    <div id="results"></div>
+
+    <script src="session.js"></script>
+    <script>
+        const BACKEND_URL = 'https://rgent.onrender.com';
+        
+        async function testCreateAccount() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Creating account...</p>';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/create-account`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email: `test-${Date.now()}@example.com`,
+                        password: 'testpassword123',
+                        plan_type: 'free_trial'
+                    })
+                });
+                
+                const data = await response.json();
+                results.innerHTML = `
+                    <p><strong>Create Account Response:</strong></p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <p><strong>Cookies:</strong></p>
+                    <pre>${document.cookie}</pre>
+                `;
+                
+                if (data.success) {
+                    // Test session immediately after
+                    setTimeout(testSession, 1000);
+                }
+            } catch (error) {
+                results.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+            }
+        }
+        
+        async function testSession() {
+            const results = document.getElementById('results');
+            results.innerHTML += '<p>Testing session...</p>';
+            
+            try {
+                const user = await getCurrentUser();
+                results.innerHTML += `
+                    <p><strong>Session Test:</strong></p>
+                    <pre>${JSON.stringify(user, null, 2)}</pre>
+                `;
+            } catch (error) {
+                results.innerHTML += `<p><strong>Session Error:</strong> ${error.message}</p>`;
+            }
+        }
+        
+        async function testSignIn() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing sign in...</p>';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/signin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email: 'test-1753638200@example.com', // Use the email from our test
+                        password: 'testpassword123'
+                    })
+                });
+                
+                const data = await response.json();
+                results.innerHTML = `
+                    <p><strong>Sign In Response:</strong></p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <p><strong>Cookies:</strong></p>
+                    <pre>${document.cookie}</pre>
+                `;
+            } catch (error) {
+                results.innerHTML = `<p><strong>Sign In Error:</strong> ${error.message}</p>`;
+            }
+        }
+        
+        // Test session on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            const status = document.getElementById('status');
+            try {
+                const user = await getCurrentUser();
+                if (user) {
+                    status.innerHTML = `✅ Logged in as: ${user.email}`;
+                } else {
+                    status.innerHTML = '❌ Not logged in';
+                }
+            } catch (error) {
+                status.innerHTML = `❌ Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html> 

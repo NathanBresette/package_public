@@ -1,42 +1,55 @@
-// Session Management using HTTP-only cookies
+// Session Management using Bearer Tokens
 // BACKEND_URL is defined in app.js
 
-// Check if user is logged in by calling the session endpoint
-async function checkSession() {
+// Check if user is logged in by checking localStorage
+function checkSession() {
     try {
-        const response = await fetch(`${BACKEND_URL}/api/session`, {
-            method: 'GET',
-            credentials: 'include' // Include cookies
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            return data.user;
-        } else {
-            return null;
+        const userData = localStorage.getItem('user');
+        const token = localStorage.getItem('auth_token');
+        if (userData && token) {
+            return JSON.parse(userData);
         }
+        return null;
     } catch (error) {
         console.error('Session check failed:', error);
         return null;
     }
 }
 
+// Get auth headers for API requests
+function getAuthHeaders() {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+    }
+    return {
+        'Content-Type': 'application/json'
+    };
+}
+
 // Logout user
 async function logout() {
     try {
-        const response = await fetch(`${BACKEND_URL}/api/logout`, {
-            method: 'POST',
-            credentials: 'include' // Include cookies
-        });
+        // Clear localStorage data
+        localStorage.removeItem('user');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('selectedPlan');
         
-        if (response.ok) {
-            // Clear any remaining localStorage data
-            localStorage.removeItem('user');
-            localStorage.removeItem('selectedPlan');
-            
-            // Redirect to signin page
-            window.location.href = 'signin.html';
+        // Call backend logout (optional - for server-side cleanup)
+        try {
+            await fetch(`${BACKEND_URL}/api/logout`, {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
+        } catch (e) {
+            // Ignore backend logout errors
         }
+        
+        // Redirect to signin page
+        window.location.href = 'signin.html';
     } catch (error) {
         console.error('Logout failed:', error);
         // Still redirect even if logout fails
@@ -45,13 +58,13 @@ async function logout() {
 }
 
 // Update navigation based on session status
-async function updateNavigation() {
+function updateNavigation() {
     const signinLink = document.getElementById('signinLink');
     const dashboardLink = document.getElementById('dashboardLink');
     const logoutLink = document.getElementById('logoutLink');
     
     if (signinLink && dashboardLink) {
-        const user = await checkSession();
+        const user = checkSession();
         
         if (user) {
             // User is logged in
@@ -68,16 +81,16 @@ async function updateNavigation() {
 }
 
 // Redirect to dashboard if already logged in
-async function redirectIfLoggedIn() {
-    const user = await checkSession();
+function redirectIfLoggedIn() {
+    const user = checkSession();
     if (user) {
         window.location.href = 'dashboard.html';
     }
 }
 
 // Redirect to signin if not logged in
-async function redirectIfNotLoggedIn() {
-    const user = await checkSession();
+function redirectIfNotLoggedIn() {
+    const user = checkSession();
     if (!user) {
         window.location.href = 'signin.html';
     }
@@ -85,6 +98,6 @@ async function redirectIfNotLoggedIn() {
 }
 
 // Get current user data
-async function getCurrentUser() {
-    return await checkSession();
+function getCurrentUser() {
+    return checkSession();
 } 

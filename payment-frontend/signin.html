@@ -119,15 +119,17 @@
                 const response = await fetch(`${BACKEND_URL}/api/signin`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include', // Include cookies
                     body: JSON.stringify({ email, password })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Store user data for backward compatibility
+                    // Store user data and token
                     localStorage.setItem('user', JSON.stringify(data.user));
+                    if (data.token) {
+                        localStorage.setItem('auth_token', data.token);
+                    }
                     // Redirect to dashboard
                     window.location.href = 'dashboard.html';
                 } else {
@@ -154,7 +156,6 @@
                 const accountResponse = await fetch(`${BACKEND_URL}/api/create-account`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include', // Include cookies
                     body: JSON.stringify({ 
                         email, 
                         password, 
@@ -165,10 +166,15 @@
                 const accountData = await accountResponse.json();
                 
                 if (accountData.success) {
+                    // Store user data and token
+                    localStorage.setItem('user', JSON.stringify(accountData.user));
+                    if (accountData.token) {
+                        localStorage.setItem('auth_token', accountData.token);
+                    }
+                    
                     // Now process the payment based on plan
                     if (plan === 'free_trial') {
                         // Free trial - redirect to dashboard
-                        localStorage.setItem('user', JSON.stringify(accountData.user));
                         window.location.href = 'dashboard.html';
                     } else {
                         // Paid plan - redirect to Stripe checkout
@@ -177,7 +183,6 @@
                         const paymentResponse = await fetch(`${BACKEND_URL}/api/create-stripe-checkout`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include', // Include cookies
                             body: JSON.stringify({
                                 lookup_key: lookupKey,
                                 customer_email: email

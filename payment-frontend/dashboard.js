@@ -7,10 +7,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
-// Load user data from session
-async function loadUserData() {
+// Load user data from localStorage
+function loadUserData() {
     try {
-        userData = await getCurrentUser();
+        userData = getCurrentUser();
         
         if (!userData) {
             // No valid session, redirect to signin
@@ -126,8 +126,8 @@ async function copyAccessCode() {
 }
 
 // Sign out function
-async function signOut() {
-    await logout();
+function signOut() {
+    logout();
 }
 
 // Account management functions

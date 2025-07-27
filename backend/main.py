@@ -1423,17 +1423,7 @@ async def signin(request: SignInRequest, response: Response):
         }
         session_token = create_session_token(user_data)
         
-        # Set secure HTTP-only cookie
-        response.set_cookie(
-            key="session_token",
-            value=session_token,
-            httponly=True,
-            secure=True,  # Only send over HTTPS
-            samesite="lax",  # Allow cross-site requests from same site
-            max_age=SESSION_EXPIRY_HOURS * 3600,  # Convert hours to seconds
-            path="/"  # Available across all paths
-        )
-        
+        # Return JWT token in response body for cross-domain storage
         return {
             "success": True,
             "access_code": user.access_code,
@@ -1441,7 +1431,8 @@ async def signin(request: SignInRequest, response: Response):
             "stripe_customer_id": customer.id,
             "subscription_id": customer.id,  # Use customer ID as subscription_id for simplicity
             "billing_status": user.billing_status,
-            "message": "Sign in successful"
+            "message": "Sign in successful",
+            "token": session_token  # JWT token for frontend storage
         }
         
     except stripe.error.StripeError as e:
@@ -1506,18 +1497,7 @@ async def create_account(request: CreateAccountRequest, response: Response):
         }
         session_token = create_session_token(user_data)
         
-        # Set secure HTTP-only cookie
-        response.set_cookie(
-            key="session_token",
-            value=session_token,
-            httponly=True,
-            secure=True,  # Only send over HTTPS
-            samesite="lax",  # Allow cross-site requests from same site
-            max_age=SESSION_EXPIRY_HOURS * 3600,  # Convert hours to seconds
-            path="/"  # Available across all paths
-        )
-        
-        # Return success with access code and user object
+        # Return success with access code, user object, and JWT token
         return {
             "success": True,
             "user": {
@@ -1529,7 +1509,8 @@ async def create_account(request: CreateAccountRequest, response: Response):
             "access_code": access_code,
             "plan_type": request.plan_type,
             "stripe_customer_id": customer.id,
-            "message": "Account created successfully"
+            "message": "Account created successfully",
+            "token": session_token  # JWT token for frontend storage
         }
         
     except stripe.error.StripeError as e:
@@ -2081,10 +2062,16 @@ async def logout(response: Response):
 
 @app.get("/api/session")
 async def get_session(request: Request):
-    """Get current session information"""
-    user = get_current_user(request)
+    """Get current session information from Bearer token"""
+    # Get token from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="No valid token")
+    
+    token = auth_header.split(" ")[1]
+    user = verify_session_token(token)
     if not user:
-        raise HTTPException(status_code=401, detail="No valid session")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     
     return {
         "success": True,
