@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RgentAI - Welcome!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 18px;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        .access-code-section {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .access-code-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .access-code {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+            letter-spacing: 2px;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .steps {
+            text-align: left;
+            margin: 30px 0;
+        }
+
+        .steps h3 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .step-content p {
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .code-block {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .email-notice {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .feature {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .feature h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .feature p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .access-code {
+                font-size: 18px;
+                padding: 15px;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">🎉</div>
+        
+        <div class="header">
+            <h1>Welcome to RgentAI!</h1>
+            <p>Your account has been created successfully. Check your email for your access code and account details.</p>
+        </div>
+
+        <div class="email-notice">
+            <strong>📧 Check your email!</strong> We've sent you a welcome email with your access code and account management links.
+        </div>
+
+        <div class="access-code-section">
+            <h2>Your Access Code</h2>
+            <p>Use this access code in your R package to start using RgentAI:</p>
+            <div class="access-code" id="accessCode">Loading...</div>
+            <button class="copy-btn" onclick="copyAccessCode()">📋 Copy Access Code</button>
+            <p style="margin-top: 15px; font-size: 14px; color: #666;">
+                We've also sent this to your email for safekeeping.
+            </p>
+        </div>
+
+        <div class="steps">
+            <h3>📚 Getting Started</h3>
+            
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Install devtools (if not already installed)</h4>
+                    <p>Install the devtools package to enable GitHub package installation.</p>
+                    <div class="code-block">install.packages("devtools")</div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Install RgentAI package</h4>
+                    <p>Install the RgentAI package directly from GitHub.</p>
+                    <div class="code-block">devtools::install_github("NathanBresette/Rgent-AI", force = TRUE)</div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Load the library</h4>
+                    <p>Load the RgentAI library into your R session.</p>
+                    <div class="code-block">library(rstudioai)</div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4>Launch the AI assistant</h4>
+                    <p>Start the AI assistant directly in RStudio.</p>
+                    <div class="code-block">ai_addin_viewer()</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h4>📊 Usage Tracking</h4>
+                <p>Monitor your API usage and costs directly in your R package. No dashboard needed!</p>
+            </div>
+            <div class="feature">
+                <h4>🔒 PII-Free Design</h4>
+                <p>We don't store your personal data. Stripe handles all PII securely.</p>
+            </div>
+            <div class="feature">
+                <h4>⚡ Real-time AI</h4>
+                <p>Get instant AI assistance for R programming, data analysis, and more.</p>
+            </div>
+        </div>
+
+        <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 20px; margin: 30px 0;">
+            <h3 style="color: #dc3545; margin-bottom: 15px;">🔧 Need Help?</h3>
+            <p style="color: #666; margin-bottom: 15px;">Having trouble with installation? Check our troubleshooting guide for common issues:</p>
+            <ul style="color: #666; margin-bottom: 20px; padding-left: 20px;">
+                <li>GitHub access issues</li>
+                <li>Function not found errors</li>
+                <li>Viewer tab not appearing</li>
+                <li>System requirements</li>
+            </ul>
+            <a href="installation.html" class="btn secondary" style="margin: 0;">📖 View Installation Guide</a>
+        </div>
+
+        <div>
+            <a href="signin.html" class="btn">⚙️ Account Management</a>
+            <a href="installation.html" class="btn secondary">📖 Installation Guide</a>
+        </div>
+
+        <div class="footer">
+            <p>Need help? Contact us at <a href="mailto:support@rgentai.com">support@rgentai.com</a></p>
+            <p>Your access code is also available in your welcome email and can be recovered anytime.</p>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://rgent.onrender.com';
+        let accessCode = null;
+
+        // Get access code from session ID in URL
+        async function getAccessCode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('session_id');
+            
+            if (!sessionId) {
+                document.getElementById('accessCode').textContent = 'Session ID not found';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/session-access-code/${sessionId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    accessCode = data.access_code;
+                    document.getElementById('accessCode').textContent = data.access_code;
+                } else {
+                    const errorData = await response.json();
+                    document.getElementById('accessCode').textContent = 'Access code not ready yet. Please check your email.';
+                    console.error('Error:', errorData.detail);
+                }
+            } catch (error) {
+                console.error('Error fetching access code:', error);
+                document.getElementById('accessCode').textContent = 'Error loading access code. Please check your email.';
+            }
+        }
+
+        function copyAccessCode() {
+            if (!accessCode) {
+                alert('Access code not available yet. Please check your email.');
+                return;
+            }
+            
+            navigator.clipboard.writeText(accessCode).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#667eea';
+                }, 2000);
+            }).catch(() => {
+                alert('Failed to copy. Please copy manually: ' + accessCode);
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', getAccessCode);
+    </script>
+</body>
+</html> 

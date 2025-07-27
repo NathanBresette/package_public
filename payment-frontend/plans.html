@@ -170,10 +170,41 @@
 
     <script src="app.js"></script>
     <script>
+        const BACKEND_URL = 'https://rgent.onrender.com';
         // Make purchasePlan function globally available
-        window.purchasePlan = function(planType) {
-            // Redirect to signin page with plan type
-            window.location.href = `signin.html?plan=${planType}`;
+        window.purchasePlan = async function(planType) {
+            try {
+                // Show loading
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('error').style.display = 'none';
+                
+                // Create Stripe checkout session
+                const response = await fetch(`${BACKEND_URL}/api/create-stripe-checkout`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        lookup_key: planType === 'pro_haiku' ? 'pro_haiku_monthly_base_v3' : 
+                                   planType === 'pro_sonnet' ? 'pro_sonnet_monthly_base_v3' : 
+                                   'free_trial_monthly_base_v3'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.url) {
+                    // Redirect to Stripe checkout
+                    window.location.href = data.url;
+                } else {
+                    throw new Error(data.detail || 'Failed to create checkout session');
+                }
+                
+            } catch (error) {
+                console.error('Checkout error:', error);
+                document.getElementById('error').textContent = 'Failed to start checkout. Please try again.';
+                document.getElementById('error').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
         };
         
         function showContactForm() {

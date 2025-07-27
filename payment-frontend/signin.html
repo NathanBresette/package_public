@@ -103,6 +103,16 @@
             color: white; 
         }
         
+        .btn.danger { 
+            background: #dc3545; 
+        }
+        
+        .btn.danger:hover { 
+            background: #c82333; 
+            transform: translateY(-2px); 
+            box-shadow: 0 10px 20px rgba(220, 53, 69, 0.3); 
+        }
+        
         .features {
             background: #f8f9fa;
             border-radius: 15px;
@@ -185,21 +195,27 @@
             <h1>Account Management</h1>
             <p>Manage your RgentAI account and access your services</p>
             
-            <div style="margin-bottom: 30px;">
-                <a href="customer-portal.html" class="btn">⚙️ Customer Portal</a>
-            </div>
+                                <div style="margin-bottom: 30px;">
+                        <a href="access-code-recovery.html" class="btn">🔑 Recover Access Code</a>
+                        <a href="customer-portal.html" class="btn secondary">⚙️ Customer Portal</a>
+                        <a href="cancel-plan.html" class="btn danger">❌ Cancel Plan</a>
+                    </div>
             
             <div class="features">
                 <h3>What you can do here:</h3>
                 <div class="features-grid">
-                    <div class="feature-item">
-                        <h4>🔑 Access Code</h4>
-                        <p>Your access code is stored securely in your Stripe account metadata.</p>
-                    </div>
-                    <div class="feature-item">
-                        <h4>⚙️ Customer Portal</h4>
-                        <p>Manage billing, view invoices, update payment methods, and access your code.</p>
-                    </div>
+                                                <div class="feature-item">
+                                <h4>🔑 Access Code Recovery</h4>
+                                <p>Forgot your access code? Enter your email to recover it instantly with usage stats.</p>
+                            </div>
+                            <div class="feature-item">
+                                <h4>⚙️ Customer Portal</h4>
+                                <p>Manage billing, view invoices, update payment methods, and account settings.</p>
+                            </div>
+                            <div class="feature-item">
+                                <h4>❌ Cancel Plan</h4>
+                                <p>Cancel your subscription anytime. Your access will continue until the end of your billing period.</p>
+                            </div>
                     <div class="feature-item">
                         <h4>📊 Usage Tracking</h4>
                         <p>Monitor your API usage and costs through your R package integration.</p>

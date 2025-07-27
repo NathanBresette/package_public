@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RgentAI - Cancel Plan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #dc3545;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .warning-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .warning-box h3::before {
+            content: "⚠️";
+            margin-right: 10px;
+        }
+
+        .warning-box ul {
+            color: #856404;
+            margin-left: 20px;
+        }
+
+        .warning-box li {
+            margin-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 12px;
+            margin-top: 2px;
+        }
+
+        .checkbox-group label {
+            margin-bottom: 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn.danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .btn.danger:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn.secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+
+        .confirmation-dialog {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .confirmation-dialog h3 {
+            color: #dc3545;
+            margin-bottom: 15px;
+        }
+
+        .confirmation-dialog p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>❌ Cancel Plan</h1>
+            <p>We're sorry to see you go. Please read the information below before proceeding.</p>
+        </div>
+
+        <div class="warning-box">
+            <h3>What happens when you cancel:</h3>
+            <ul>
+                <li>Your subscription will be cancelled immediately</li>
+                <li>You'll lose access to RgentAI at the end of your current billing period</li>
+                <li>Your access code will be deactivated</li>
+                <li>You can reactivate anytime by creating a new account</li>
+            </ul>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <form id="cancelForm" onsubmit="cancelPlan(event)">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="Enter your email address" required>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="confirmCancel" required>
+                <label for="confirmCancel">
+                    I understand that cancelling will deactivate my access code and I'll lose access to RgentAI at the end of my billing period.
+                </label>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="confirmEmail" required>
+                <label for="confirmEmail">
+                    I confirm this is the email address associated with my RgentAI account.
+                </label>
+            </div>
+            
+            <button type="submit" class="btn danger" id="cancelBtn">Cancel My Plan</button>
+        </form>
+
+        <div id="confirmationDialog" class="confirmation-dialog">
+            <h3>⚠️ Final Confirmation</h3>
+            <p>Are you absolutely sure you want to cancel your RgentAI plan? This action cannot be undone.</p>
+            <button onclick="confirmCancellation()" class="btn danger">Yes, Cancel My Plan</button>
+            <button onclick="hideConfirmation()" class="btn secondary">No, Keep My Plan</button>
+        </div>
+
+        <div class="back-link">
+            <a href="signin.html">← Back to Account Management</a>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://rgent.onrender.com';
+        let pendingCancellation = null;
+
+        async function cancelPlan(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const confirmCancel = document.getElementById('confirmCancel').checked;
+            const confirmEmail = document.getElementById('confirmEmail').checked;
+            
+            if (!confirmCancel || !confirmEmail) {
+                showMessage('Please check both confirmation boxes to proceed.', 'error');
+                return;
+            }
+            
+            // Show final confirmation dialog
+            showConfirmation();
+            pendingCancellation = { email };
+        }
+
+        async function confirmCancellation() {
+            if (!pendingCancellation) return;
+            
+            const cancelBtn = document.getElementById('cancelBtn');
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = 'Cancelling...';
+            hideConfirmation();
+            hideMessage();
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/cancel-subscription`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: pendingCancellation.email })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showMessage('Your plan has been cancelled successfully. You can reactivate anytime by creating a new account.', 'success');
+                    document.getElementById('cancelForm').style.display = 'none';
+                } else {
+                    showMessage(data.detail || 'Failed to cancel plan. Please try again.', 'error');
+                }
+            } catch (error) {
+                console.error('Cancellation error:', error);
+                showMessage('Failed to cancel plan. Please try again.', 'error');
+            } finally {
+                cancelBtn.disabled = false;
+                cancelBtn.textContent = 'Cancel My Plan';
+                pendingCancellation = null;
+            }
+        }
+
+        function showConfirmation() {
+            document.getElementById('confirmationDialog').style.display = 'block';
+        }
+
+        function hideConfirmation() {
+            document.getElementById('confirmationDialog').style.display = 'none';
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+        }
+
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+    </script>
+</body>
+</html> 

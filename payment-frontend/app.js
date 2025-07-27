@@ -28,9 +28,9 @@ function handlePaymentSuccess(sessionId) {
     // Store session info for verification
     localStorage.setItem('paymentSessionId', sessionId);
     
-    // Redirect to dashboard or show access code
+    // Redirect to success page
     setTimeout(() => {
-        window.location.href = '/dashboard.html';
+        window.location.href = '/success.html';
     }, 2000);
 }
 
