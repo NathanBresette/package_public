@@ -1768,6 +1768,20 @@ async def stripe_webhook(request: Request):
             if success:
                 print(f"✅ Payment successful! Access code generated: {access_code} for plan: {plan_type}")
                 print(f"🔗 Linked to Stripe customer: {customer_id}")
+                
+                # Store access code in Stripe customer metadata
+                stripe.Customer.modify(
+                    customer_id,
+                    metadata={'access_code': access_code}
+                )
+                
+                # Get customer email and send welcome email
+                customer = stripe.Customer.retrieve(customer_id)
+                if customer.email:
+                    await send_welcome_email(customer.email, access_code, plan_type, customer_id)
+                    print(f"📧 Welcome email sent to: {customer.email}")
+                else:
+                    print(f"⚠️ No email found for customer: {customer_id}")
             else:
                 print(f"❌ Failed to create user for customer: {customer_id}")
             
