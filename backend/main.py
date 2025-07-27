@@ -2293,25 +2293,52 @@ async def send_welcome_email(email: str, access_code: str, plan_type: str, strip
         </html>
         """
         
-        # Try to send via SendGrid if API key is configured
-        sendgrid_api_key = os.getenv('SENDGRID_API_KEY')
-        if sendgrid_api_key:
+        # Try to send via AWS SES if configured
+        aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+        aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+        aws_region = os.getenv('AWS_REGION', 'us-east-1')
+        
+        if aws_access_key and aws_secret_key:
             try:
-                import sendgrid
-                from sendgrid.helpers.mail import Mail
+                import boto3
+                from botocore.exceptions import ClientError
                 
-                sg = sendgrid.SendGridAPIClient(api_key=sendgrid_api_key)
-                message = Mail(
-                    from_email='noreply@rgentai.com',  # Update with your verified sender
-                    to_emails=email,
-                    subject=subject,
-                    html_content=html_content
+                # Create SES client
+                ses_client = boto3.client(
+                    'ses',
+                    region_name=aws_region,
+                    aws_access_key_id=aws_access_key,
+                    aws_secret_access_key=aws_secret_key
                 )
-                response = sg.send(message)
-                print(f"📧 Welcome email sent via SendGrid to {email} (Status: {response.status_code})")
+                
+                # Send email
+                response = ses_client.send_email(
+                    Source='noreply@rgentai.com',  # Update with your verified sender
+                    Destination={
+                        'ToAddresses': [email]
+                    },
+                    Message={
+                        'Subject': {
+                            'Data': subject,
+                            'Charset': 'UTF-8'
+                        },
+                        'Body': {
+                            'Html': {
+                                'Data': html_content,
+                                'Charset': 'UTF-8'
+                            }
+                        }
+                    }
+                )
+                
+                print(f"📧 Welcome email sent via AWS SES to {email} (Message ID: {response['MessageId']})")
                 return True
+                
+            except ClientError as e:
+                print(f"AWS SES error: {e.response['Error']['Message']}")
+                # Fall back to logging
             except Exception as e:
-                print(f"SendGrid error: {e}")
+                print(f"AWS SES error: {e}")
                 # Fall back to logging
         
         # Fallback: just log the email (for development/testing)
@@ -2319,7 +2346,7 @@ async def send_welcome_email(email: str, access_code: str, plan_type: str, strip
         print(f"📧 Access code: {access_code}")
         print(f"📧 Plan: {plan_type}")
         print(f"📧 Customer ID: {stripe_customer_id}")
-        print(f"📧 To enable real emails, set SENDGRID_API_KEY environment variable")
+        print(f"📧 To enable real emails, set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION environment variables")
         
     except Exception as e:
         print(f"Error sending welcome email: {e}")
