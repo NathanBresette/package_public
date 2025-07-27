@@ -1372,6 +1372,7 @@ async def signin(request: SignInRequest):
             "access_code": user.access_code,
             "plan_type": plan_type,
             "stripe_customer_id": customer.id,
+            "subscription_id": customer.id,  # Use customer ID as subscription_id for simplicity
             "billing_status": user.billing_status,
             "message": "Sign in successful"
         }

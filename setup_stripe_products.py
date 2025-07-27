@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""
+Setup Stripe Products Script
+Creates products and prices with proper metadata for the PII-free system
+"""
+
+import os
+import stripe
+from datetime import datetime
+
+def setup_stripe_products():
+    """Create products and prices with proper metadata"""
+    
+    if not os.getenv("STRIPE_SECRET_KEY"):
+        print("❌ STRIPE_SECRET_KEY not set")
+        print("💡 Set it with: export STRIPE_SECRET_KEY=sk_test_...")
+        return False
+    
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    
+    print("🏗️  Setting up Stripe products and prices...")
+    print("=" * 50)
+    
+    try:
+        # Product 1: Free Plan
+        print("\n1️⃣ Creating Free Plan Product...")
+        free_product = stripe.Product.create(
+            name="RgentAI Free Plan",
+            description="Free tier with 50 requests per day",
+            metadata={
+                'plan_type': 'free',
+                'requests': '50',
+                'daily_limit': '50'
+            }
+        )
+        print(f"✅ Created product: {free_product.name} (ID: {free_product.id})")
+        
+        # Free Plan Price
+        free_price = stripe.Price.create(
+            product=free_product.id,
+            unit_amount=0,  # $0
+            currency='usd',
+            recurring=None,  # One-time
+            lookup_key='free_plan',
+            metadata={
+                'plan_type': 'free',
+                'requests': '50'
+            }
+        )
+        print(f"✅ Created price: $0 (Lookup Key: {free_price.lookup_key})")
+        
+        # Product 2: Pro Haiku
+        print("\n2️⃣ Creating Pro Haiku Product...")
+        haiku_product = stripe.Product.create(
+            name="RgentAI Pro Haiku",
+            description="Pro plan with Haiku model - 1000 requests per day",
+            metadata={
+                'plan_type': 'pro_haiku',
+                'requests': '1000',
+                'daily_limit': '1000',
+                'model': 'haiku'
+            }
+        )
+        print(f"✅ Created product: {haiku_product.name} (ID: {haiku_product.id})")
+        
+        # Pro Haiku Price
+        haiku_price = stripe.Price.create(
+            product=haiku_product.id,
+            unit_amount=1000,  # $10.00
+            currency='usd',
+            recurring={'interval': 'month'},
+            lookup_key='pro_haiku_monthly_base',
+            metadata={
+                'plan_type': 'pro_haiku',
+                'requests': '1000',
+                'model': 'haiku'
+            }
+        )
+        print(f"✅ Created price: $10/month (Lookup Key: {haiku_price.lookup_key})")
+        
+        # Product 3: Pro Sonnet
+        print("\n3️⃣ Creating Pro Sonnet Product...")
+        sonnet_product = stripe.Product.create(
+            name="RgentAI Pro Sonnet",
+            description="Pro plan with Sonnet model - 1000 requests per day",
+            metadata={
+                'plan_type': 'pro_sonnet',
+                'requests': '1000',
+                'daily_limit': '1000',
+                'model': 'sonnet'
+            }
+        )
+        print(f"✅ Created product: {sonnet_product.name} (ID: {sonnet_product.id})")
+        
+        # Pro Sonnet Price
+        sonnet_price = stripe.Price.create(
+            product=sonnet_product.id,
+            unit_amount=2000,  # $20.00
+            currency='usd',
+            recurring={'interval': 'month'},
+            lookup_key='pro_sonnet_monthly_base',
+            metadata={
+                'plan_type': 'pro_sonnet',
+                'requests': '1000',
+                'model': 'sonnet'
+            }
+        )
+        print(f"✅ Created price: $20/month (Lookup Key: {sonnet_price.lookup_key})")
+        
+        print("\n" + "=" * 50)
+        print("✅ All products and prices created successfully!")
+        
+        # Summary
+        print("\n📋 Summary:")
+        print(f"   • Free Plan: {free_product.name} - $0")
+        print(f"   • Pro Haiku: {haiku_product.name} - $10/month")
+        print(f"   • Pro Sonnet: {sonnet_product.name} - $20/month")
+        print(f"   • Lookup Keys: {free_price.lookup_key}, {haiku_price.lookup_key}, {sonnet_price.lookup_key}")
+        
+        return True
+        
+    except stripe.error.StripeError as e:
+        print(f"❌ Stripe error: {e}")
+        return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def create_test_customer():
+    """Create a test customer with proper metadata"""
+    
+    if not os.getenv("STRIPE_SECRET_KEY"):
+        print("❌ STRIPE_SECRET_KEY not set")
+        return False
+    
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    
+    print("\n🧪 Creating test customer...")
+    
+    try:
+        # Create test customer
+        customer = stripe.Customer.create(
+            email=f"test-{datetime.now().strftime('%Y%m%d-%H%M%S')}@example.com",
+            metadata={
+                'plan_type': 'free',
+                'created_at': datetime.now().isoformat(),
+                'test_customer': 'true'
+            }
+        )
+        
+        print(f"✅ Created test customer: {customer.email}")
+        print(f"   ID: {customer.id}")
+        print(f"   Metadata: {customer.metadata}")
+        
+        return customer.id
+        
+    except Exception as e:
+        print(f"❌ Error creating test customer: {e}")
+        return False
+
+def main():
+    print("🏗️  Stripe Products Setup Tool")
+    print("=" * 50)
+    
+    # Check if Stripe is configured
+    if not os.getenv("STRIPE_SECRET_KEY"):
+        print("❌ STRIPE_SECRET_KEY not set")
+        print("💡 Set it with: export STRIPE_SECRET_KEY=sk_test_...")
+        return
+    
+    print("Options:")
+    print("1. Create products and prices with metadata")
+    print("2. Create test customer")
+    print("3. Run both")
+    
+    choice = input("\nEnter choice (1-3): ").strip()
+    
+    if choice == "1":
+        setup_stripe_products()
+    elif choice == "2":
+        create_test_customer()
+    elif choice == "3":
+        print("\n🏗️  Running complete setup...")
+        setup_stripe_products()
+        create_test_customer()
+    else:
+        print("Invalid choice")
+
+if __name__ == "__main__":
+    main() 
