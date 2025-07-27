@@ -1949,8 +1949,12 @@ async def debug_stripe_products():
         ]
         
         # Get all prices to check lookup keys
-        all_prices = stripe.Price.list(limit=100)
+        all_prices = stripe.Price.list(limit=200)  # Increased limit
         lookup_keys_found = [price.lookup_key for price in all_prices.data if price.lookup_key]
+        
+        # Add debugging info
+        debug_info["total_prices_found"] = len(all_prices.data)
+        debug_info["all_lookup_keys"] = lookup_keys_found
         
         for key in required_keys:
             if key in lookup_keys_found:
