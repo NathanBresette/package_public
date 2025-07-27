@@ -1402,15 +1402,19 @@ async def create_stripe_checkout(request: LookupKeyRequest):
         if not prices.data:
             raise HTTPException(status_code=400, detail=f"Price not found for lookup key: {request.lookup_key}")
         
+        # Determine mode based on lookup key
+        is_free_trial = request.lookup_key == 'free_trial_monthly_v3'
+        mode = 'payment' if is_free_trial else 'subscription'
+        
         # Create checkout session
         checkout_session = stripe.checkout.Session.create(
             line_items=[{
                 'price': prices.data[0].id,
                 'quantity': 1,
             }],
-            mode='subscription',
-            success_url='https://rgentaipaymentfrontend-6mah5bcp1-nathanbresettes-projects.vercel.app/success.html?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url='https://rgentaipaymentfrontend-6mah5bcp1-nathanbresettes-projects.vercel.app/plans.html?cancelled=true',
+            mode=mode,
+            success_url='https://rgentaipaymentfrontend-8etdab7q3-nathanbresettes-projects.vercel.app/success.html?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url='https://rgentaipaymentfrontend-8etdab7q3-nathanbresettes-projects.vercel.app/plans.html?cancelled=true',
             metadata={
                 'lookup_key': request.lookup_key,
                 'customer_email': request.customer_email or ''
