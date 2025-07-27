@@ -43,6 +43,14 @@ conversation_memory = ConversationMemory()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost",
+        "http://localhost:*",
+        "https://localhost",
+        "https://localhost:*",
+        "http://127.0.0.1",
+        "http://127.0.0.1:*",
+        "https://127.0.0.1",
+        "https://127.0.0.1:*",
         "https://rgentai.com",
         "https://www.rgentai.com",
         "https://rgentaipaymentfrontend-ew8pk5dl5-nathanbresettes-projects.vercel.app",
