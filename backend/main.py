@@ -2273,11 +2273,27 @@ async def send_welcome_email(email: str, access_code: str, plan_type: str, strip
                     <a href="{portal_url}" class="button">⚙️ Customer Portal</a>
                     
                     <h2>📚 Getting Started</h2>
-                    <ol>
-                        <li>Install the RgentAI R package</li>
-                        <li>Use your access code: <code>{access_code}</code></li>
-                        <li>Start chatting with AI in RStudio!</li>
-                    </ol>
+                    <p>Follow these 4 simple commands to install RgentAI:</p>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 14px; margin: 15px 0;">
+                        <div style="color: #008000;"># 1. Install devtools (if not already installed)</div>
+                        <div>install.packages("devtools")</div>
+                        <div style="color: #008000;"># 2. Install RgentAI package</div>
+                        <div>devtools::install_github("NathanBresette/Rgent-AI", force = TRUE)</div>
+                        <div style="color: #008000;"># 3. Load the library</div>
+                        <div>library(rstudioai)</div>
+                        <div style="color: #008000;"># 4. Launch the AI assistant</div>
+                        <div>ai_addin_viewer()</div>
+                    </div>
+                    <p><strong>That's it!</strong> Your AI assistant is now built right into RStudio.</p>
+                    
+                    <h2>🔧 Troubleshooting</h2>
+                    <p>Having issues? Check our <a href="https://rgentaipaymentfrontend-99wx5gg8n-nathanbresettes-projects.vercel.app/installation.html" style="color: #667eea;">installation guide</a> for help with:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>GitHub access issues</li>
+                        <li>Function not found errors</li>
+                        <li>Viewer tab not appearing</li>
+                        <li>System requirements</li>
+                    </ul>
                     
                     <h2>💳 Plan Details</h2>
                     <p><strong>Plan:</strong> {plan_type.replace('_', ' ').title()}</p>
