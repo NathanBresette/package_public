@@ -39,28 +39,35 @@ context_summarizer = ContextSummarizer()
 response_cache = SmartResponseCache(max_cache_size=200, cache_ttl_hours=4)  # Conservative settings for memory
 conversation_memory = ConversationMemory()
 
-# CORS middleware - secure configuration for production
+# CORS middleware with specific origins for credentials
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://rgentai.com",
         "https://www.rgentai.com",
-        "https://rgentaipaymentfrontend.vercel.app",
-        "https://rgentaipaymentfrontend-git-main-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-nka6bz0vz-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-jtp0tnaxe-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-gqkul5cqg-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-8etdab7q3-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-6mah5bcp1-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-48aut5e63-nathanbresettes-projects.vercel.app",
-        "https://rgentaipaymentfrontend-99wx5gg8n-nathanbresettes-projects.vercel.app",
-        "http://localhost:3000",  # For local development
-        "http://localhost:5000",  # For local development
-        "http://127.0.0.1:3000",  # For local development
-        "http://127.0.0.1:5000"   # For local development
+        "https://rgentaipaymentfrontend-ew8pk5dl5-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-o4ob99zze-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-24qwzmcww-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-2f73fkw67-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-7xcldi1f1-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-5h45s8n8c-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-d7z59ufy0-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-cd24rb2wa-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-8s6ucoaol-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-7vk5c8mrf-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-79nkmdy48-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-rabswexjg-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-mq0o4tkgk-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-k9jxnqgi9-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-72uqwy40t-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-m0wbxn6a0-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-7h9ix8zte-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-4rxewgad5-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-2xb7w0q9i-nathanbresettes-projects.vercel.app",
+        "https://rgentaipaymentfrontend-g99m59s1w-nathanbresettes-projects.vercel.app"
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -1395,26 +1402,22 @@ async def create_stripe_checkout(request: LookupKeyRequest):
         if not prices.data:
             raise HTTPException(status_code=400, detail=f"Price not found for lookup key: {request.lookup_key}")
         
-        # Determine mode based on lookup key
-        is_free_trial = request.lookup_key == 'free_trial_monthly_v3'
-        mode = 'payment' if is_free_trial else 'subscription'
-        
         # Create checkout session
         checkout_session = stripe.checkout.Session.create(
             line_items=[{
                 'price': prices.data[0].id,
                 'quantity': 1,
             }],
-            mode=mode,
-            success_url='https://rgentaipaymentfrontend-8etdab7q3-nathanbresettes-projects.vercel.app/success.html?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url='https://rgentaipaymentfrontend-8etdab7q3-nathanbresettes-projects.vercel.app/plans.html?cancelled=true',
+            mode='subscription',
+            success_url='https://rgentai.com/dashboard?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url='https://rgentai.com/plans?cancelled=true',
             metadata={
                 'lookup_key': request.lookup_key,
                 'customer_email': request.customer_email or ''
             }
         )
         
-        return {"url": checkout_session.url}
+        return {"id": checkout_session.id}
         
     except Exception as e:
         print(f"Error creating Stripe checkout session: {str(e)}")
@@ -1839,24 +1842,27 @@ async def get_session_access_code(session_id: str):
     
     try:
         session = stripe.checkout.Session.retrieve(session_id)
-        print(f"Session payment status: {session.payment_status}")
         
         if session.payment_status != 'paid':
             raise HTTPException(status_code=400, detail="Payment not completed")
         
         customer_id = session.customer
-        print(f"Customer ID: {customer_id}")
         if not customer_id:
             raise HTTPException(status_code=404, detail="No customer found for session")
         
         # Get customer and access code from metadata
         customer = stripe.Customer.retrieve(customer_id)
-        print(f"Customer metadata: {customer.metadata}")
         access_code = customer.metadata.get('access_code')
-        print(f"Access code from metadata: {access_code}")
         
         if not access_code:
-            raise HTTPException(status_code=404, detail="Access code not found")
+            # Fallback: check if user exists in our database
+            print(f"Access code not found in Stripe metadata, checking database for customer {customer_id}")
+            user = user_manager.get_user_by_stripe_customer_id(customer_id)
+            if user:
+                access_code = user['access_code']
+                print(f"Found access code in database: {access_code}")
+            else:
+                raise HTTPException(status_code=404, detail="Access code not found - webhook may still be processing")
         
         return {
             "access_code": access_code,
@@ -1865,10 +1871,8 @@ async def get_session_access_code(session_id: str):
         }
         
     except stripe.error.StripeError as e:
-        print(f"Stripe error in session-access-code: {e}")
         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
     except Exception as e:
-        print(f"Error in session-access-code endpoint: {e}")
         raise HTTPException(status_code=500, detail=f"Error retrieving access code: {str(e)}")
 
 # Password management removed - Stripe handles user authentication
