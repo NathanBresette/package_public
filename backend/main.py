@@ -1402,19 +1402,19 @@ async def create_account(request: CreateAccountRequest):
         # Generate access code
         access_code = user_manager.generate_access_code()
         
-        # Determine plan limits based on plan_type
+        # Determine plan settings based on plan_type (subscription + pay-per-token model)
         if request.plan_type == 'free':
-            daily_limit = 50
+            daily_limit = 1000  # High limit for free tier
             monthly_budget = 5.0
         elif request.plan_type == 'pro_haiku':
-            daily_limit = 1000
-            monthly_budget = 10.0
+            daily_limit = 10000  # Very high limit - users pay per token
+            monthly_budget = 100.0  # Higher budget for token usage
         elif request.plan_type == 'pro_sonnet':
-            daily_limit = 1000
-            monthly_budget = 10.0
+            daily_limit = 10000  # Very high limit - users pay per token
+            monthly_budget = 200.0  # Higher budget for token usage
         else:  # pro
-            daily_limit = 500
-            monthly_budget = 10.0
+            daily_limit = 5000  # High limit for pay-per-token
+            monthly_budget = 50.0
         
         # Create user with Stripe customer ID - NO PII stored
         success = user_manager.create_user(
@@ -1481,19 +1481,19 @@ async def stripe_webhook(request: Request):
                 # Determine plan type from subscription metadata or lookup key
                 lookup_key = subscription.metadata.get('lookup_key', '')
                 if lookup_key:
-                    # New lookup key approach
+                    # New lookup key approach (pay-per-token model)
                     if 'haiku' in lookup_key:
                         plan_type = 'pro_haiku'
-                        daily_limit = 1000  # Higher limit for Pro users
-                        monthly_budget = 10.0
+                        daily_limit = 10000  # Very high limit - users pay per token
+                        monthly_budget = 100.0  # Higher budget for token usage
                     elif 'sonnet' in lookup_key:
                         plan_type = 'pro_sonnet'
-                        daily_limit = 1000  # Higher limit for Pro users
-                        monthly_budget = 10.0
+                        daily_limit = 10000  # Very high limit - users pay per token
+                        monthly_budget = 200.0  # Higher budget for token usage
                     else:
                         plan_type = 'pro'
-                        daily_limit = 500
-                        monthly_budget = 10.0
+                        daily_limit = 5000  # High limit for pay-per-token
+                        monthly_budget = 50.0
                 else:
                     # Legacy approach
                     plan_type = subscription.metadata.get('plan_type', 'pro')
