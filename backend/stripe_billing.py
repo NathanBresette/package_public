@@ -30,12 +30,12 @@ def get_usage_price_ids(plan_type: str) -> Dict[str, str]:
     # You'll need to replace these with your actual price IDs
     price_ids = {
         'pro_haiku': {
-            'input_tokens': 'price_input_haiku',  # Replace with actual price ID
-            'output_tokens': 'price_output_haiku'  # Replace with actual price ID
+            'input_tokens': 'price_input_haiku',  # Replace with actual price ID for lookup_key: pro_haiku_input_tokens
+            'output_tokens': 'price_output_haiku'  # Replace with actual price ID for lookup_key: pro_haiku_output_tokens
         },
         'pro_sonnet': {
-            'input_tokens': 'price_input_sonnet',  # Replace with actual price ID
-            'output_tokens': 'price_output_sonnet'  # Replace with actual price ID
+            'input_tokens': 'price_input_sonnet',  # Replace with actual price ID for lookup_key: pro_sonnet_input_tokens
+            'output_tokens': 'price_output_sonnet'  # Replace with actual price ID for lookup_key: pro_sonnet_output_tokens
         }
     }
     return price_ids.get(plan_type, {})
@@ -67,40 +67,25 @@ def report_token_usage(customer_id: str, input_tokens: int, output_tokens: int) 
             print(f"No active subscription for customer {customer_id}")
             return False
         
-        # Get usage price IDs
-        price_ids = get_usage_price_ids(plan_type)
-        if not price_ids:
-            print(f"No usage prices configured for plan {plan_type}")
-            return False
-        
-        # Find subscription items for usage-based prices
-        subscription_items = {}
-        for item in subscription.items.data:
-            if item.price.id in price_ids.values():
-                if item.price.id == price_ids['input_tokens']:
-                    subscription_items['input_tokens'] = item.id
-                elif item.price.id == price_ids['output_tokens']:
-                    subscription_items['output_tokens'] = item.id
-        
-        # Report input token usage
-        if 'input_tokens' in subscription_items and input_tokens > 0:
-            stripe.SubscriptionItem.create_usage_record(
-                subscription_items['input_tokens'],
-                quantity=input_tokens,
+        # Report input token usage to Input Tokens meter
+        if input_tokens > 0:
+            stripe.MeterEvent.create(
+                meter='Input Tokens',
+                value=input_tokens,
                 timestamp=int(datetime.now().timestamp()),
-                action='increment'
+                customer=customer_id
             )
-            print(f"Reported {input_tokens} input tokens for customer {customer_id}")
+            print(f"Reported {input_tokens} input tokens to meter for customer {customer_id}")
         
-        # Report output token usage
-        if 'output_tokens' in subscription_items and output_tokens > 0:
-            stripe.SubscriptionItem.create_usage_record(
-                subscription_items['output_tokens'],
-                quantity=output_tokens,
+        # Report output token usage to Output Tokens meter
+        if output_tokens > 0:
+            stripe.MeterEvent.create(
+                meter='Output Tokens',
+                value=output_tokens,
                 timestamp=int(datetime.now().timestamp()),
-                action='increment'
+                customer=customer_id
             )
-            print(f"Reported {output_tokens} output tokens for customer {customer_id}")
+            print(f"Reported {output_tokens} output tokens to meter for customer {customer_id}")
         
         return True
         
