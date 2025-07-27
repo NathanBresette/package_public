@@ -85,7 +85,7 @@
                 
                 // Update the heading based on plan
                 const heading = document.querySelector('.signin-card h1');
-                if (plan === 'free') {
+                if (plan === 'free_trial') {
                     heading.textContent = 'Create Free Trial Account';
                 } else if (plan === 'pro_haiku') {
                     heading.textContent = 'Create Pro (Haiku) Account';
@@ -156,11 +156,7 @@
                 
                 if (accountData.success) {
                     // Now process the payment based on plan
-                    if (plan === 'free') {
-                        // Free plan - redirect to dashboard
-                        localStorage.setItem('user', JSON.stringify(accountData.user));
-                        window.location.href = 'dashboard.html';
-                    } else if (plan === 'free_trial') {
+                    if (plan === 'free_trial') {
                         // Free trial - redirect to dashboard
                         localStorage.setItem('user', JSON.stringify(accountData.user));
                         window.location.href = 'dashboard.html';
