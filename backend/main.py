@@ -81,10 +81,10 @@ async def add_security_headers(request: Request, call_next):
     csp_policy = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' https://js.stripe.com https://checkout.stripe.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https:; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data: https:; "
-        "connect-src 'self' https://api.stripe.com https://rgent.onrender.com; "
+        "connect-src 'self' https://api.stripe.com https://rgent.onrender.com https:; "
         "frame-src https://js.stripe.com https://checkout.stripe.com; "
         "object-src 'none'; "
         "base-uri 'self'; "
