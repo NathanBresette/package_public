@@ -92,7 +92,7 @@ async def add_security_headers(request: Request, call_next):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https:; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data: https:; "
-        "connect-src 'self' https://api.stripe.com https://rgent.onrender.com https:; "
+        "connect-src 'self' http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* https://api.stripe.com https://rgent.onrender.com https:; "
         "frame-src https://js.stripe.com https://checkout.stripe.com; "
         "object-src 'none'; "
         "base-uri 'self'; "
