@@ -29,13 +29,13 @@ def get_usage_price_ids(plan_type: str) -> Dict[str, str]:
     # These will be the price IDs you create in Stripe dashboard
     # You'll need to replace these with your actual price IDs
     price_ids = {
-        'pro_haiku': {
-            'input_tokens': 'price_input_haiku',  # Replace with actual price ID for lookup_key: pro_haiku_input_tokens
-            'output_tokens': 'price_output_haiku'  # Replace with actual price ID for lookup_key: pro_haiku_output_tokens
-        },
-            'pro_sonnet': {
-        'input_tokens': 'price_input_sonnet',  # Replace with actual price ID for lookup_key: pro_sonnet_input_tokens_v2
-        'output_tokens': 'price_output_sonnet'  # Replace with actual price ID for lookup_key: pro_sonnet_output_tokens_v2
+            'pro_haiku': {
+        'input_tokens': 'price_input_haiku',  # Replace with actual price ID for lookup_key: pro_haiku_input_tokens_v3
+        'output_tokens': 'price_output_haiku'  # Replace with actual price ID for lookup_key: pro_haiku_output_tokens_v3
+    },
+    'pro_sonnet': {
+        'input_tokens': 'price_input_sonnet',  # Replace with actual price ID for lookup_key: pro_sonnet_input_tokens_v3
+        'output_tokens': 'price_output_sonnet'  # Replace with actual price ID for lookup_key: pro_sonnet_output_tokens_v3
     }
     }
     return price_ids.get(plan_type, {})
