@@ -572,5 +572,41 @@ class UserManagerPostgreSQL:
             print(f"Error creating user: {e}")
             return False
 
+    def update_user_status(self, access_code: str, is_active: bool = None, billing_status: str = None) -> bool:
+        """Update user's active status and/or billing status"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Build dynamic update query
+                update_fields = []
+                params = []
+                
+                if is_active is not None:
+                    update_fields.append("is_active = %s")
+                    params.append(is_active)
+                
+                if billing_status is not None:
+                    update_fields.append("billing_status = %s")
+                    params.append(billing_status)
+                
+                if not update_fields:
+                    return False
+                
+                params.append(access_code)
+                query = f'''
+                    UPDATE users 
+                    SET {', '.join(update_fields)}
+                    WHERE access_code = %s
+                '''
+                
+                cursor.execute(query, params)
+                conn.commit()
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            print(f"Error updating user status: {e}")
+            return False
+
 # Create global instance
 user_manager = UserManagerPostgreSQL() 

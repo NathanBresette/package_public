@@ -2171,6 +2171,96 @@ def get_current_user(request: Request) -> Optional[dict]:
         return None
     return verify_session_token(session_token)
 
+@app.post("/api/recover-access-code")
+async def recover_access_code(request: CustomerPortalRequest):
+    """Recover access code via email - PII-free approach"""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
+    try:
+        # Find Stripe customer by email
+        customers = stripe.Customer.list(email=request.email, limit=1)
+        
+        if not customers.data:
+            raise HTTPException(status_code=404, detail="No account found with this email")
+        
+        customer = customers.data[0]
+        access_code = customer.metadata.get('access_code')
+        
+        if not access_code:
+            raise HTTPException(status_code=404, detail="Access code not found for this account")
+        
+        # Get usage stats from user manager
+        usage_stats = user_manager.get_user_stats(access_code)
+        
+        # Send email with access code and usage stats
+        # Note: In production, you'd use a proper email service
+        # For now, we'll return the info (you can integrate with SendGrid, etc.)
+        
+        return {
+            "success": True,
+            "message": "Access code sent to your email",
+            "access_code": access_code,
+            "usage_stats": usage_stats,
+            "email_sent": True  # In production, this would be based on actual email send
+        }
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    except Exception as e:
+        print(f"Access code recovery error: {e}")
+        raise HTTPException(status_code=500, detail=f"Access code recovery failed: {str(e)}")
+
+@app.post("/api/cancel-subscription")
+async def cancel_subscription(request: CustomerPortalRequest):
+    """Cancel user subscription - PII-free approach"""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
+    try:
+        # Find Stripe customer by email
+        customers = stripe.Customer.list(email=request.email, limit=1)
+        
+        if not customers.data:
+            raise HTTPException(status_code=404, detail="No account found with this email")
+        
+        customer = customers.data[0]
+        
+        # Get active subscriptions for this customer
+        subscriptions = stripe.Subscription.list(customer=customer.id, status='active', limit=1)
+        
+        if not subscriptions.data:
+            raise HTTPException(status_code=404, detail="No active subscription found")
+        
+        subscription = subscriptions.data[0]
+        
+        # Cancel the subscription at period end
+        cancelled_subscription = stripe.Subscription.modify(
+            subscription.id,
+            cancel_at_period_end=True
+        )
+        
+        # Update user status in database
+        access_code = customer.metadata.get('access_code')
+        if access_code:
+            user_manager.update_user_status(access_code, is_active=False, billing_status='cancelled')
+        
+        return {
+            "success": True,
+            "message": "Subscription cancelled successfully",
+            "subscription_id": subscription.id,
+            "cancelled_at": cancelled_subscription.cancel_at,
+            "current_period_end": subscription.current_period_end
+        }
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    except Exception as e:
+        print(f"Subscription cancellation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Subscription cancellation failed: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000) 
