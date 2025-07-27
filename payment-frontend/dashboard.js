@@ -32,23 +32,27 @@ function updateDashboard(data) {
     // Update access code
     document.getElementById('accessCode').textContent = data.access_code;
     
-    // Update user info
-    document.getElementById('userName').textContent = data.user_name;
-    document.getElementById('userEmail').textContent = data.email;
+    // Update user info (PII-free - use access code and email from session)
+    document.getElementById('userName').textContent = 'User';
+    document.getElementById('userEmail').textContent = data.email || 'user@example.com';
     
-    // Update plan info
+    // Update plan info (PII-free - use plan type to determine limits)
     let planType = 'Free Trial';
-    let planDetails = `${data.daily_limit} requests (one-time trial)`;
+    let planDetails = '25 requests (one-time trial)';
+    let dailyLimit = 25;
     
     if (data.plan_type === 'pro_haiku') {
         planType = 'Pro (Haiku)';
         planDetails = '$10/month + pay per token';
+        dailyLimit = 10000; // Very high limit for pay-per-token
     } else if (data.plan_type === 'pro_sonnet') {
         planType = 'Pro (Sonnet)';
         planDetails = '$10/month + pay per token';
+        dailyLimit = 10000; // Very high limit for pay-per-token
     } else if (data.plan_type === 'free_trial') {
         planType = 'Free Trial';
-        planDetails = `${data.daily_limit} requests (one-time trial)`;
+        planDetails = '25 requests (one-time trial)';
+        dailyLimit = 25;
     }
     
     document.getElementById('planName').textContent = planType + ' Plan';
@@ -60,14 +64,14 @@ function updateDashboard(data) {
     let daysLeft = '30';
     
     if (data.plan_type === 'free_trial') {
-        requestsRemaining = Math.max(0, data.daily_limit - requestsUsed);
+        requestsRemaining = Math.max(0, dailyLimit - requestsUsed);
         daysLeft = 'Trial';
     } else if (data.plan_type === 'pro_haiku' || data.plan_type === 'pro_sonnet') {
         requestsUsed = 'Unlimited';
         requestsRemaining = 'Unlimited';
         daysLeft = 'Monthly';
     } else {
-        requestsRemaining = Math.max(0, data.daily_limit - requestsUsed);
+        requestsRemaining = Math.max(0, dailyLimit - requestsUsed);
         daysLeft = '30';
     }
     
@@ -84,7 +88,7 @@ function updateDashboard(data) {
         progressFill.style.background = '#27ae60';
     } else {
         // Limited plans - show actual usage
-        const progressPercent = (requestsUsed / data.daily_limit) * 100;
+        const progressPercent = (requestsUsed / dailyLimit) * 100;
         progressFill.style.width = `${Math.min(progressPercent, 100)}%`;
         
         // Update progress bar color based on usage
