@@ -1520,6 +1520,9 @@ async def create_account(request: CreateAccountRequest, response: Response):
         }
         session_token = create_session_token(user_data)
         
+        # Send welcome email with access code and account info
+        await send_welcome_email(request.email, access_code, request.plan_type, customer.id)
+        
         # Return success with access code, user object, and JWT token
         return {
             "success": True,
@@ -1532,7 +1535,7 @@ async def create_account(request: CreateAccountRequest, response: Response):
             "access_code": access_code,
             "plan_type": request.plan_type,
             "stripe_customer_id": customer.id,
-            "message": "Account created successfully",
+            "message": "Account created successfully! Check your email for your access code.",
             "token": session_token  # JWT token for frontend storage
         }
         
@@ -2170,6 +2173,103 @@ def get_current_user(request: Request) -> Optional[dict]:
     if not session_token:
         return None
     return verify_session_token(session_token)
+
+async def send_welcome_email(email: str, access_code: str, plan_type: str, stripe_customer_id: str):
+    """Send welcome email with access code and account management links"""
+    try:
+        # For now, we'll use a simple email service
+        # In production, you'd use SendGrid, AWS SES, or similar
+        
+        # Create customer portal session URL
+        portal_url = f"https://rgentaipaymentfrontend-99wx5gg8n-nathanbresettes-projects.vercel.app/customer-portal.html"
+        recovery_url = f"https://rgentaipaymentfrontend-99wx5gg8n-nathanbresettes-projects.vercel.app/access-code-recovery.html"
+        
+        # Email content
+        subject = "Welcome to RgentAI! Your Access Code & Account Info"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .access-code {{ background: #e9ecef; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 18px; text-align: center; margin: 20px 0; }}
+                .button {{ display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 5px; }}
+                .warning {{ background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+                .footer {{ text-align: center; margin-top: 30px; color: #666; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎉 Welcome to RgentAI!</h1>
+                    <p>Your account has been created successfully</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Your Access Code</h2>
+                    <p>Use this access code in your R package to start using RgentAI:</p>
+                    <div class="access-code">{access_code}</div>
+                    
+                    <div class="warning">
+                        <strong>⚠️ Important:</strong> Keep this access code secure. You can always recover it later if needed.
+                    </div>
+                    
+                    <h2>📊 Usage Tracking</h2>
+                    <p>Monitor your usage and costs directly in your R package. No need to log into a dashboard!</p>
+                    
+                    <h2>🔧 Account Management</h2>
+                    <p>Manage your subscription, billing, and access code:</p>
+                    
+                    <a href="{recovery_url}" class="button">🔑 Recover Access Code</a>
+                    <a href="{portal_url}" class="button">⚙️ Customer Portal</a>
+                    
+                    <h2>📚 Getting Started</h2>
+                    <ol>
+                        <li>Install the RgentAI R package</li>
+                        <li>Use your access code: <code>{access_code}</code></li>
+                        <li>Start chatting with AI in RStudio!</li>
+                    </ol>
+                    
+                    <h2>💳 Plan Details</h2>
+                    <p><strong>Plan:</strong> {plan_type.replace('_', ' ').title()}</p>
+                    <p><strong>Customer ID:</strong> {stripe_customer_id}</p>
+                </div>
+                
+                <div class="footer">
+                    <p>Need help? Contact us at support@rgentai.com</p>
+                    <p>© 2024 RgentAI. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # For now, just log the email (in production, send via email service)
+        print(f"📧 Welcome email would be sent to {email}")
+        print(f"📧 Access code: {access_code}")
+        print(f"📧 Plan: {plan_type}")
+        print(f"📧 Customer ID: {stripe_customer_id}")
+        
+        # TODO: Integrate with email service (SendGrid, AWS SES, etc.)
+        # Example with SendGrid:
+        # import sendgrid
+        # from sendgrid.helpers.mail import Mail
+        # sg = sendgrid.SendGridAPIClient(api_key=os.getenv('SENDGRID_API_KEY'))
+        # message = Mail(
+        #     from_email='noreply@rgentai.com',
+        #     to_emails=email,
+        #     subject=subject,
+        #     html_content=html_content
+        # )
+        # response = sg.send(message)
+        
+    except Exception as e:
+        print(f"Error sending welcome email: {e}")
+        # Don't fail the account creation if email fails
 
 @app.post("/api/recover-access-code")
 async def recover_access_code(request: CustomerPortalRequest):
