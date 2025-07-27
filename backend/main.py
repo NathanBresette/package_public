@@ -42,7 +42,16 @@ conversation_memory = ConversationMemory()
 
 
 
-# CORS removed - allowing all origins for RStudio add-in compatibility
+# CORS middleware - allow all origins for RStudio add-in compatibility
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 
