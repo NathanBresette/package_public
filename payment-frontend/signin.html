@@ -73,6 +73,7 @@
 
     <!-- Stripe.js library -->
     <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
     <script src="session.js"></script>
     
     <script>
@@ -107,7 +108,7 @@
         
         // Make functions globally available
         window.signIn = async function() {
-            const email = document.getElementById('email').value;
+            const email = DOMPurify.sanitize(document.getElementById('email').value);
             const password = document.getElementById('password').value;
             
             if (!email || !password) {
@@ -142,7 +143,7 @@
         }
         
         window.createAccount = async function() {
-            const email = document.getElementById('new-email').value;
+            const email = DOMPurify.sanitize(document.getElementById('new-email').value);
             const password = document.getElementById('new-password').value;
             const plan = localStorage.getItem('selectedPlan');
             

@@ -29,6 +29,8 @@ import time
 from psycopg2.extras import RealDictCursor
 import jwt
 from contextlib import asynccontextmanager
+import re
+import html
 
 app = FastAPI(title="RStudio AI Backend", version="1.3.0")
 
@@ -68,6 +70,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security middleware for CSP headers
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses"""
+    response = await call_next(request)
+    
+    # Content Security Policy - strict CSP to prevent XSS
+    csp_policy = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://js.stripe.com https://checkout.stripe.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https://api.stripe.com https://rgent.onrender.com; "
+        "frame-src https://js.stripe.com https://checkout.stripe.com; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none'; "
+        "upgrade-insecure-requests;"
+    )
+    
+    response.headers["Content-Security-Policy"] = csp_policy
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    
+    return response
 
 # Pydantic models for request/response
 class AccessCodeRequest(BaseModel):
@@ -494,6 +527,11 @@ async def chat_with_ai(request: ChatRequest):
     if not is_valid:
         raise HTTPException(status_code=401, detail=message)
     
+    # Sanitize user input to prevent XSS
+    sanitized_prompt = sanitize_input(request.prompt)
+    if not sanitized_prompt:
+        raise HTTPException(status_code=400, detail="Invalid prompt")
+    
     # Handle conversation memory
     conversation_id = request.conversation_id
     
@@ -544,7 +582,7 @@ async def chat_with_ai(request: ChatRequest):
         context_summary_response = memory_context.get_user_context_summary(request.access_code)
         
         # Build enhanced prompt with summarized context
-        enhanced_prompt = request.prompt
+        enhanced_prompt = sanitized_prompt
         
         # Include summarized current context if provided
         current_context_text = ""
@@ -2051,13 +2089,16 @@ async def debug_stripe_products():
         return {"error": str(e)}
 
 @app.post("/api/logout")
-async def logout(response: Response):
-    """Logout user by clearing session cookie"""
-    # Clear the session cookie
-    response.delete_cookie(
-        key="session_token",
-        path="/"
-    )
+async def logout(request: Request):
+    """Logout user by blacklisting JWT token"""
+    # Get token from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        # Add token to blacklist
+        token_blacklist.add(token)
+        print(f"Token blacklisted: {token[:20]}...")
+    
     return {"success": True, "message": "Logged out successfully"}
 
 @app.get("/api/session")
@@ -2172,25 +2213,68 @@ async def test_checkout_creation(request: LookupKeyRequest):
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 SESSION_EXPIRY_HOURS = 24
 
+# Token blacklist for logout (in production, use Redis or database)
+token_blacklist = set()
+
+def sanitize_input(text: str) -> str:
+    """Sanitize user input to prevent XSS and injection attacks"""
+    if not text:
+        return ""
+    
+    # Remove any HTML tags
+    text = re.sub(r'<[^>]+>', '', text)
+    
+    # HTML escape special characters
+    text = html.escape(text)
+    
+    # Remove any remaining potentially dangerous characters
+    text = re.sub(r'[<>"\']', '', text)
+    
+    return text.strip()
+
 def create_session_token(user_data: dict) -> str:
-    """Create a JWT session token"""
+    """Create a JWT session token with security features"""
+    now = datetime.utcnow()
     payload = {
         "user_id": user_data.get("access_code"),
         "email": user_data.get("email"),
         "plan_type": user_data.get("plan_type"),
-        "exp": datetime.utcnow() + timedelta(hours=SESSION_EXPIRY_HOURS),
-        "iat": datetime.utcnow()
+        "stripe_customer_id": user_data.get("stripe_customer_id"),
+        "iat": now,  # Issued at
+        "exp": now + timedelta(hours=SESSION_EXPIRY_HOURS),  # Expiration
+        "jti": str(uuid.uuid4()),  # JWT ID for token revocation
+        "iss": "rgent-ai",  # Issuer
+        "aud": "rgent-ai-frontend"  # Audience
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
 def verify_session_token(token: str) -> Optional[dict]:
-    """Verify and decode JWT session token"""
+    """Verify and decode JWT session token with security checks"""
+    # Check if token is blacklisted
+    if token in token_blacklist:
+        print("JWT token is blacklisted")
+        return None
+        
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(
+            token, 
+            SECRET_KEY, 
+            algorithms=["HS256"],
+            issuer="rgent-ai",
+            audience="rgent-ai-frontend"
+        )
         return payload
     except jwt.ExpiredSignatureError:
+        print("JWT token expired")
+        return None
+    except jwt.InvalidIssuerError:
+        print("JWT token has invalid issuer")
+        return None
+    except jwt.InvalidAudienceError:
+        print("JWT token has invalid audience")
         return None
     except jwt.InvalidTokenError:
+        print("JWT token is invalid")
         return None
 
 def get_current_user(request: Request) -> Optional[dict]:
