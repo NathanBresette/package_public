@@ -214,63 +214,12 @@
             margin-top: 50px;
         }
 
-        /* Navigation styles */
-        .nav-bar {
-            background: white;
-            border-radius: 15px;
-            padding: 15px 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .nav-logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #667eea;
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .nav-link {
-            color: #333;
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            transition: all 0.3s ease;
-            font-weight: 500;
-        }
-
-        .nav-link:hover {
-            background: #f8f9fa;
-            color: #667eea;
-        }
-
-        .nav-link.active {
-            background: #667eea;
-            color: white;
-        }
-
-        @media (max-width: 768px) {
-            .nav-bar {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .nav-links {
-                justify-content: center;
-            }
-        }
+        /* Consistent navbar styles */
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 24px 40px 16px 40px; background: rgba(255,255,255,0.95); box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 10; }
+        .navbar .logo { font-size: 1.7rem; font-weight: 700; color: #667eea; letter-spacing: 1px; }
+        .navbar nav a { margin-left: 32px; color: #333; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+        .navbar nav a:hover { color: #764ba2; }
+        @media (max-width: 700px) { .navbar { flex-direction: column; align-items: flex-start; padding: 18px 12px; } .navbar nav a { margin-left: 18px; } }
 
         .loading {
             text-align: center;
@@ -307,20 +256,42 @@
             }
         }
     </style>
+    <script>
+        // Check if user is logged in and update navigation
+        function updateNavigation() {
+            const userData = localStorage.getItem('user');
+            const signinLink = document.getElementById('signinLink');
+            const dashboardLink = document.getElementById('dashboardLink');
+            
+            if (userData) {
+                // User is logged in
+                signinLink.style.display = 'none';
+                dashboardLink.style.display = 'inline';
+            } else {
+                // User is not logged in
+                signinLink.style.display = 'inline';
+                dashboardLink.style.display = 'none';
+            }
+        }
+        
+        // Run on page load
+        document.addEventListener('DOMContentLoaded', updateNavigation);
+    </script>
 </head>
 <body>
     <div class="container">
-        <!-- Navigation Bar -->
-        <div class="nav-bar">
-            <a href="homepage.html" class="nav-logo">🚀 RgentAI</a>
-            <div class="nav-links">
-                <a href="homepage.html" class="nav-link">Home</a>
-                <a href="plans.html" class="nav-link">Pricing</a>
-                <a href="installation.html" class="nav-link">Installation</a>
-                <a href="data-security.html" class="nav-link">Security</a>
-                <a href="updates.html" class="nav-link">Updates</a>
-                <a href="dashboard.html" class="nav-link active">Dashboard</a>
-            </div>
+        <!-- Consistent navbar -->
+        <div class="navbar">
+            <div class="logo">RgentAI</div>
+            <nav>
+                <a href="homepage.html">Home</a>
+                <a href="plans.html">Plans & Pricing</a>
+                <a href="installation.html">Installation</a>
+                <a href="data-security.html">Data Security</a>
+                <a href="updates.html">Dev Updates</a>
+                <a href="signin.html" id="signinLink">Sign In</a>
+                <a href="dashboard.html" id="dashboardLink" style="display: none;">Dashboard</a>
+            </nav>
         </div>
 
         <div class="header">
