@@ -9,4 +9,5 @@ stripe>=8.0.0
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.23
 PyJWT==2.8.0
+sendgrid==6.10.0
 # Force rebuild - PostgreSQL support for persistent database 

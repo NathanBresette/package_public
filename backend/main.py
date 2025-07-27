@@ -1834,6 +1834,40 @@ async def get_payment_status(session_id: str):
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Session not found: {str(e)}")
 
+@app.get("/api/session-access-code/{session_id}")
+async def get_session_access_code(session_id: str):
+    """Get access code for a completed checkout session"""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        
+        if session.payment_status != 'paid':
+            raise HTTPException(status_code=400, detail="Payment not completed")
+        
+        customer_id = session.customer
+        if not customer_id:
+            raise HTTPException(status_code=404, detail="No customer found for session")
+        
+        # Get customer and access code from metadata
+        customer = stripe.Customer.retrieve(customer_id)
+        access_code = customer.metadata.get('access_code')
+        
+        if not access_code:
+            raise HTTPException(status_code=404, detail="Access code not found")
+        
+        return {
+            "access_code": access_code,
+            "customer_email": customer.email,
+            "plan_type": customer.metadata.get('plan_type', 'unknown')
+        }
+        
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving access code: {str(e)}")
+
 # Password management removed - Stripe handles user authentication
 # @app.post("/api/forgot-password") - REMOVED
 # @app.post("/api/reset-password") - REMOVED
@@ -2191,9 +2225,6 @@ def get_current_user(request: Request) -> Optional[dict]:
 async def send_welcome_email(email: str, access_code: str, plan_type: str, stripe_customer_id: str):
     """Send welcome email with access code and account management links"""
     try:
-        # For now, we'll use a simple email service
-        # In production, you'd use SendGrid, AWS SES, or similar
-        
         # Create customer portal session URL
         portal_url = f"https://rgentaipaymentfrontend-99wx5gg8n-nathanbresettes-projects.vercel.app/customer-portal.html"
         recovery_url = f"https://rgentaipaymentfrontend-99wx5gg8n-nathanbresettes-projects.vercel.app/access-code-recovery.html"
@@ -2262,24 +2293,33 @@ async def send_welcome_email(email: str, access_code: str, plan_type: str, strip
         </html>
         """
         
-        # For now, just log the email (in production, send via email service)
+        # Try to send via SendGrid if API key is configured
+        sendgrid_api_key = os.getenv('SENDGRID_API_KEY')
+        if sendgrid_api_key:
+            try:
+                import sendgrid
+                from sendgrid.helpers.mail import Mail
+                
+                sg = sendgrid.SendGridAPIClient(api_key=sendgrid_api_key)
+                message = Mail(
+                    from_email='noreply@rgentai.com',  # Update with your verified sender
+                    to_emails=email,
+                    subject=subject,
+                    html_content=html_content
+                )
+                response = sg.send(message)
+                print(f"📧 Welcome email sent via SendGrid to {email} (Status: {response.status_code})")
+                return True
+            except Exception as e:
+                print(f"SendGrid error: {e}")
+                # Fall back to logging
+        
+        # Fallback: just log the email (for development/testing)
         print(f"📧 Welcome email would be sent to {email}")
         print(f"📧 Access code: {access_code}")
         print(f"📧 Plan: {plan_type}")
         print(f"📧 Customer ID: {stripe_customer_id}")
-        
-        # TODO: Integrate with email service (SendGrid, AWS SES, etc.)
-        # Example with SendGrid:
-        # import sendgrid
-        # from sendgrid.helpers.mail import Mail
-        # sg = sendgrid.SendGridAPIClient(api_key=os.getenv('SENDGRID_API_KEY'))
-        # message = Mail(
-        #     from_email='noreply@rgentai.com',
-        #     to_emails=email,
-        #     subject=subject,
-        #     html_content=html_content
-        # )
-        # response = sg.send(message)
+        print(f"📧 To enable real emails, set SENDGRID_API_KEY environment variable")
         
     except Exception as e:
         print(f"Error sending welcome email: {e}")
