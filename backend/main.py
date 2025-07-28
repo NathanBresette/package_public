@@ -958,7 +958,9 @@ async def get_usage(access_code: str):
     if not is_valid:
         raise HTTPException(status_code=401, detail=message)
     
-    return get_usage_stats(access_code)
+    stats = get_usage_stats(access_code)
+    print(f"DEBUG: /usage endpoint returning stats: {stats}")
+    return stats
 
 @app.get("/usage/{access_code}")
 async def get_user_usage(access_code: str):
