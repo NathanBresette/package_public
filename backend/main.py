@@ -1386,6 +1386,9 @@ async def create_stripe_checkout(request: LookupKeyRequest):
         if not prices.data:
             raise HTTPException(status_code=400, detail=f"Price not found for lookup key: {request.lookup_key}")
         
+        # Check if this is a free trial
+        is_free_trial = request.lookup_key == 'free_trial_monthly_v3'
+        
         # Create checkout session
         checkout_session = stripe.checkout.Session.create(
             line_items=[{
@@ -1398,7 +1401,14 @@ async def create_stripe_checkout(request: LookupKeyRequest):
             metadata={
                 'lookup_key': request.lookup_key,
                 'customer_email': request.customer_email or ''
-            }
+            },
+            # For free trial, add trial period
+            subscription_data={
+                'trial_period_days': 7 if is_free_trial else None,
+                'metadata': {
+                    'plan_type': 'free_trial' if is_free_trial else 'paid'
+                }
+            } if is_free_trial else None
         )
         
         return {"url": checkout_session.url}
