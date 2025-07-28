@@ -792,7 +792,7 @@ async def chat_with_ai_stream(request: ChatRequest):
                 yield f"data: {json.dumps({'chunk': chunk, 'done': False})}\n\n"
             
             # Send completion signal
-            yield f"data: {json.dumps({'chunk': '', 'done': True, 'total_tokens': total_tokens, 'conversation_id': conversation_id})}\n\n"
+            yield f"data: {json.dumps({'chunk': '', 'done': True, 'total_tokens': input_tokens + output_tokens, 'conversation_id': conversation_id})}\n\n"
             
             # Store messages in conversation memory
             conversation_memory.add_message(conversation_id, "user", request.prompt, request.context_data, request.context_type)
@@ -808,7 +808,7 @@ async def chat_with_ai_stream(request: ChatRequest):
             cost = (total_tokens / 1000) * cost_per_1k_tokens
             
             # Track usage with cost
-            track_usage(request.access_code, {
+            usage_data = {
                 "request_type": "chat_stream",
                 "total_tokens": total_tokens,
                 "input_tokens": input_tokens,
@@ -820,7 +820,10 @@ async def chat_with_ai_stream(request: ChatRequest):
                 "context_summarized": context_summary is not None,
                 "cached": False,
                 "streamed": True
-            })
+            }
+            print(f"DEBUG: Streaming - Tracking usage for {request.access_code}")
+            print(f"DEBUG: Streaming - Usage data: {usage_data}")
+            track_usage(request.access_code, usage_data)
             
             # Force garbage collection after processing
             gc.collect()
