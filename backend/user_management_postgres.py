@@ -143,6 +143,8 @@ class UserManagerPostgreSQL:
                         access_code VARCHAR(50) NOT NULL,
                         timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         request_type VARCHAR(100) NOT NULL,
+                        input_tokens INTEGER DEFAULT 0,
+                        output_tokens INTEGER DEFAULT 0,
                         tokens_used INTEGER DEFAULT 0,
                         cost DECIMAL(10,6) DEFAULT 0.0,
                         prompt_length INTEGER DEFAULT 0,
@@ -152,6 +154,35 @@ class UserManagerPostgreSQL:
                         FOREIGN KEY (access_code) REFERENCES users (access_code)
                     )
                 ''')
+                
+                # Add new columns if they don't exist (for existing databases)
+                try:
+                    cursor.execute('ALTER TABLE users ADD COLUMN total_input_tokens INTEGER DEFAULT 0')
+                    print("✅ Added total_input_tokens column to users table")
+                except Exception as e:
+                    if "already exists" not in str(e):
+                        print(f"⚠️ Could not add total_input_tokens column: {e}")
+                
+                try:
+                    cursor.execute('ALTER TABLE users ADD COLUMN total_output_tokens INTEGER DEFAULT 0')
+                    print("✅ Added total_output_tokens column to users table")
+                except Exception as e:
+                    if "already exists" not in str(e):
+                        print(f"⚠️ Could not add total_output_tokens column: {e}")
+                
+                try:
+                    cursor.execute('ALTER TABLE usage_records ADD COLUMN input_tokens INTEGER DEFAULT 0')
+                    print("✅ Added input_tokens column to usage_records table")
+                except Exception as e:
+                    if "already exists" not in str(e):
+                        print(f"⚠️ Could not add input_tokens column: {e}")
+                
+                try:
+                    cursor.execute('ALTER TABLE usage_records ADD COLUMN output_tokens INTEGER DEFAULT 0')
+                    print("✅ Added output_tokens column to usage_records table")
+                except Exception as e:
+                    if "already exists" not in str(e):
+                        print(f"⚠️ Could not add output_tokens column: {e}")
                 
                 # Create indexes for better performance
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_access_code ON users(access_code)')
@@ -308,13 +339,26 @@ class UserManagerPostgreSQL:
     def record_usage(self, access_code: str, usage_info: Dict) -> bool:
         """Record usage for cost tracking - NO sensitive data stored"""
         try:
+            print(f"DEBUG: PostgreSQL UserManager recording usage for {access_code}")
+            print(f"DEBUG: Input tokens: {usage_info.get('input_tokens', 0)}")
+            print(f"DEBUG: Output tokens: {usage_info.get('output_tokens', 0)}")
+            
             with self._get_connection() as conn:
                 cursor = conn.cursor()
+                
+                # Calculate total tokens from input and output
+                input_tokens = usage_info.get('input_tokens', 0)
+                output_tokens = usage_info.get('output_tokens', 0)
+                total_tokens = input_tokens + output_tokens
+                
+                print(f"DEBUG: Calculated total tokens: {total_tokens}")
                 
                 # Only store non-sensitive usage data
                 safe_usage_info = {
                     'request_type': usage_info.get('request_type', 'unknown'),
-                    'tokens_used': usage_info.get('tokens_used', 0),
+                    'input_tokens': input_tokens,
+                    'output_tokens': output_tokens,
+                    'tokens_used': total_tokens,
                     'cost': usage_info.get('cost', 0.0),
                     'prompt_length': usage_info.get('prompt_length', 0),
                     'response_length': usage_info.get('response_length', 0),
@@ -325,12 +369,14 @@ class UserManagerPostgreSQL:
                 # Insert usage record - NO sensitive data
                 cursor.execute('''
                     INSERT INTO usage_records (
-                        access_code, request_type, tokens_used, cost,
+                        access_code, request_type, input_tokens, output_tokens, tokens_used, cost,
                         prompt_length, response_length, success, error_message
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ''', (
                     access_code,
                     safe_usage_info['request_type'],
+                    safe_usage_info['input_tokens'],
+                    safe_usage_info['output_tokens'],
                     safe_usage_info['tokens_used'],
                     safe_usage_info['cost'],
                     safe_usage_info['prompt_length'],
@@ -345,15 +391,20 @@ class UserManagerPostgreSQL:
                         total_requests = total_requests + 1,
                         total_cost = total_cost + %s,
                         total_tokens = total_tokens + %s,
+                        total_input_tokens = COALESCE(total_input_tokens, 0) + %s,
+                        total_output_tokens = COALESCE(total_output_tokens, 0) + %s,
                         last_activity = CURRENT_TIMESTAMP
                     WHERE access_code = %s
                 ''', (
                     safe_usage_info['cost'],
                     safe_usage_info['tokens_used'],
+                    safe_usage_info['input_tokens'],
+                    safe_usage_info['output_tokens'],
                     access_code
                 ))
                 
                 conn.commit()
+                print(f"DEBUG: Successfully recorded usage for {access_code}")
                 return True
                 
         except Exception as e:
@@ -363,6 +414,7 @@ class UserManagerPostgreSQL:
     def get_user_stats(self, access_code: str) -> Dict:
         """Get comprehensive user statistics"""
         try:
+            print(f"DEBUG: PostgreSQL getting user stats for {access_code}")
             with self._get_connection() as conn:
                 cursor = conn.cursor(cursor_factory=RealDictCursor)
                 
@@ -371,11 +423,16 @@ class UserManagerPostgreSQL:
                 user = cursor.fetchone()
                 
                 if not user:
+                    print(f"DEBUG: No user found for {access_code}")
                     return {}
                 
                 # Get today's usage
                 cursor.execute('''
-                    SELECT COUNT(*) as requests, COALESCE(SUM(cost), 0) as cost 
+                    SELECT 
+                        COUNT(*) as requests, 
+                        COALESCE(SUM(cost), 0) as cost,
+                        COALESCE(SUM(input_tokens), 0) as input_tokens,
+                        COALESCE(SUM(output_tokens), 0) as output_tokens
                     FROM usage_records 
                     WHERE access_code = %s AND DATE(timestamp) = CURRENT_DATE
                 ''', (access_code,))
@@ -383,13 +440,20 @@ class UserManagerPostgreSQL:
                 
                 # Get this month's usage
                 cursor.execute('''
-                    SELECT COUNT(*) as requests, COALESCE(SUM(cost), 0) as cost 
+                    SELECT 
+                        COUNT(*) as requests, 
+                        COALESCE(SUM(cost), 0) as cost,
+                        COALESCE(SUM(input_tokens), 0) as input_tokens,
+                        COALESCE(SUM(output_tokens), 0) as output_tokens
                     FROM usage_records 
                     WHERE access_code = %s AND timestamp >= DATE_TRUNC('month', CURRENT_DATE)
                 ''', (access_code,))
                 month_stats = cursor.fetchone()
                 
-                return {
+                print(f"DEBUG: Today's stats: {today_stats}")
+                print(f"DEBUG: Month's stats: {month_stats}")
+                
+                result = {
                     'access_code': user['access_code'],
                     'is_active': user['is_active'],
                     'created_at': user['created_at'].isoformat() if user['created_at'] else '',
@@ -397,17 +461,26 @@ class UserManagerPostgreSQL:
                     'total_requests': user['total_requests'],
                     'total_cost': float(user['total_cost']),
                     'total_tokens': user['total_tokens'],
+                    'total_input_tokens': user.get('total_input_tokens', 0),
+                    'total_output_tokens': user.get('total_output_tokens', 0),
                     'daily_limit': user['daily_limit'],
                     'monthly_budget': float(user['monthly_budget']),
                     'rate_limit': user['rate_limit'],
                     'billing_status': user['billing_status'],
                     'today_requests': today_stats['requests'],
                     'today_cost': float(today_stats['cost']),
+                    'today_input_tokens': today_stats['input_tokens'],
+                    'today_output_tokens': today_stats['output_tokens'],
                     'month_requests': month_stats['requests'],
                     'month_cost': float(month_stats['cost']),
+                    'month_input_tokens': month_stats['input_tokens'],
+                    'month_output_tokens': month_stats['output_tokens'],
                     'requests_remaining': max(0, user['daily_limit'] - today_stats['requests']),
                     'budget_remaining': max(0, float(user['monthly_budget']) - float(month_stats['cost']))
                 }
+                
+                print(f"DEBUG: Returning stats: {result}")
+                return result
                 
         except Exception as e:
             print(f"Error getting user stats: {e}")
