@@ -42,10 +42,12 @@ class UsageRecord:
     timestamp: str
     access_code: str
     request_type: str
-    tokens_used: int
     cost: float
     prompt_length: int
     response_length: int
+    input_tokens: int = 0
+    output_tokens: int = 0
+    tokens_used: int = 0
     success: bool = True
     error_message: str = ""
 
@@ -78,6 +80,8 @@ class UserManagerSQLite:
                     total_requests INTEGER DEFAULT 0,
                     total_cost REAL DEFAULT 0.0,
                     total_tokens INTEGER DEFAULT 0,
+                    total_input_tokens INTEGER DEFAULT 0,
+                    total_output_tokens INTEGER DEFAULT 0,
                     daily_limit INTEGER DEFAULT 100,
                     monthly_budget REAL DEFAULT 10.0,
                     rate_limit INTEGER DEFAULT 10,
@@ -87,23 +91,45 @@ class UserManagerSQLite:
                 )
             ''')
             
-            # Create usage_records table
+            # Create usage_records table with input/output tokens
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS usage_records (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     access_code TEXT NOT NULL,
                     timestamp TEXT NOT NULL,
                     request_type TEXT NOT NULL,
+                    input_tokens INTEGER DEFAULT 0,
+                    output_tokens INTEGER DEFAULT 0,
                     tokens_used INTEGER DEFAULT 0,
                     cost REAL DEFAULT 0.0,
                     prompt_length INTEGER DEFAULT 0,
                     response_length INTEGER DEFAULT 0,
                     success BOOLEAN DEFAULT 1,
-                    error_message TEXT,
-                    FOREIGN KEY (access_code) REFERENCES users (access_code)
+                    error_message TEXT
                 )
             ''')
             
+            # Add new columns if they don't exist (for existing databases)
+            try:
+                cursor.execute('ALTER TABLE users ADD COLUMN total_input_tokens INTEGER DEFAULT 0')
+            except:
+                pass  # Column already exists
+                
+            try:
+                cursor.execute('ALTER TABLE users ADD COLUMN total_output_tokens INTEGER DEFAULT 0')
+            except:
+                pass  # Column already exists
+                
+            try:
+                cursor.execute('ALTER TABLE usage_records ADD COLUMN input_tokens INTEGER DEFAULT 0')
+            except:
+                pass  # Column already exists
+                
+            try:
+                cursor.execute('ALTER TABLE usage_records ADD COLUMN output_tokens INTEGER DEFAULT 0')
+            except:
+                pass  # Column already exists
+
             # Create indexes for better performance
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_access_code ON users(access_code)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
@@ -237,17 +263,24 @@ class UserManagerSQLite:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
+                # Calculate total tokens from input and output
+                input_tokens = usage_info.get('input_tokens', 0)
+                output_tokens = usage_info.get('output_tokens', 0)
+                total_tokens = input_tokens + output_tokens
+                
                 # Insert usage record
                 cursor.execute('''
                     INSERT INTO usage_records (
-                        access_code, timestamp, request_type, tokens_used, cost,
-                        prompt_length, response_length, success, error_message
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        access_code, timestamp, request_type, input_tokens, output_tokens,
+                        tokens_used, cost, prompt_length, response_length, success, error_message
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     access_code,
                     datetime.now().isoformat(),
                     usage_info.get('request_type', 'unknown'),
-                    usage_info.get('tokens_used', 0),
+                    input_tokens,
+                    output_tokens,
+                    total_tokens,
                     usage_info.get('cost', 0.0),
                     usage_info.get('prompt_length', 0),
                     usage_info.get('response_length', 0),
@@ -261,11 +294,15 @@ class UserManagerSQLite:
                         total_requests = total_requests + 1,
                         total_cost = total_cost + ?,
                         total_tokens = total_tokens + ?,
+                        total_input_tokens = total_input_tokens + ?,
+                        total_output_tokens = total_output_tokens + ?,
                         last_activity = ?
                     WHERE access_code = ?
                 ''', (
                     usage_info.get('cost', 0.0),
-                    usage_info.get('tokens_used', 0),
+                    total_tokens,
+                    input_tokens,
+                    output_tokens,
                     datetime.now().isoformat(),
                     access_code
                 ))
@@ -293,7 +330,11 @@ class UserManagerSQLite:
                 # Get today's usage
                 today = datetime.now().date().isoformat()
                 cursor.execute('''
-                    SELECT COUNT(*) as requests, COALESCE(SUM(cost), 0) as cost 
+                    SELECT 
+                        COUNT(*) as requests, 
+                        COALESCE(SUM(cost), 0) as cost,
+                        COALESCE(SUM(input_tokens), 0) as input_tokens,
+                        COALESCE(SUM(output_tokens), 0) as output_tokens
                     FROM usage_records 
                     WHERE access_code = ? AND date(timestamp) = ?
                 ''', (access_code, today))
@@ -302,7 +343,11 @@ class UserManagerSQLite:
                 # Get this month's usage
                 month_start = datetime.now().replace(day=1).date().isoformat()
                 cursor.execute('''
-                    SELECT COUNT(*) as requests, COALESCE(SUM(cost), 0) as cost 
+                    SELECT 
+                        COUNT(*) as requests, 
+                        COALESCE(SUM(cost), 0) as cost,
+                        COALESCE(SUM(input_tokens), 0) as input_tokens,
+                        COALESCE(SUM(output_tokens), 0) as output_tokens
                     FROM usage_records 
                     WHERE access_code = ? AND date(timestamp) >= ?
                 ''', (access_code, month_start))
@@ -318,14 +363,20 @@ class UserManagerSQLite:
                     'total_requests': user['total_requests'],
                     'total_cost': user['total_cost'],
                     'total_tokens': user['total_tokens'],
+                    'total_input_tokens': user.get('total_input_tokens', 0),
+                    'total_output_tokens': user.get('total_output_tokens', 0),
                     'daily_limit': user['daily_limit'],
                     'monthly_budget': user['monthly_budget'],
                     'rate_limit': user['rate_limit'],
                     'billing_status': user['billing_status'],
                     'today_requests': today_stats['requests'],
                     'today_cost': today_stats['cost'],
+                    'today_input_tokens': today_stats['input_tokens'],
+                    'today_output_tokens': today_stats['output_tokens'],
                     'month_requests': month_stats['requests'],
                     'month_cost': month_stats['cost'],
+                    'month_input_tokens': month_stats['input_tokens'],
+                    'month_output_tokens': month_stats['output_tokens'],
                     'requests_remaining': max(0, user['daily_limit'] - today_stats['requests']),
                     'budget_remaining': max(0, user['monthly_budget'] - month_stats['cost'])
                 }

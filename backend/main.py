@@ -779,7 +779,7 @@ async def chat_with_ai_stream(request: ChatRequest):
             print(f"DEBUG: About to start streaming from Gemini API - UPDATED")
             full_response = ""
             total_tokens = 0
-            input_tokens = 0
+            input_tokens = len(enhanced_prompt.split()) * 1.3  # Approximate input token count
             output_tokens = 0
             
             async for chunk in stream_claude_api(enhanced_prompt):
