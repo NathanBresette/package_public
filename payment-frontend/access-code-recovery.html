@@ -15,10 +15,39 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            margin: 0;
+            color: #333;
+        }
+        
+        .navbar { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 24px 40px 16px 40px; 
+            background: rgba(255,255,255,0.95); 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
+            position: sticky; 
+            top: 0; 
+            z-index: 10; 
+        }
+        
+        .navbar .logo { 
+            font-size: 1.7rem; 
+            font-weight: 700; 
+            color: #667eea; 
+            letter-spacing: 1px; 
+        }
+        
+        .navbar nav a { 
+            margin-left: 32px; 
+            color: #333; 
+            text-decoration: none; 
+            font-weight: 500; 
+            transition: color 0.2s; 
+        }
+        
+        .navbar nav a:hover { 
+            color: #764ba2; 
         }
 
         .container {
@@ -27,7 +56,8 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             padding: 40px;
             max-width: 500px;
-            width: 100%;
+            width: 90%;
+            margin: 40px auto;
         }
 
         .header {
@@ -190,13 +220,40 @@
             color: #28a745;
             font-weight: bold;
         }
+
+        @media (max-width: 700px) {
+            .navbar {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 18px 12px;
+            }
+            .navbar nav a {
+                margin-left: 18px;
+            }
+            .container {
+                margin: 140px auto 40px auto;
+                padding: 30px 20px;
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="navbar">
+        <div class="logo">RgentAI</div>
+        <nav>
+            <a href="homepage.html">Home</a>
+            <a href="plans.html">Plans & Pricing</a>
+            <a href="installation.html">Installation</a>
+            <a href="data-security.html">Data Security</a>
+            <a href="updates.html">Dev Updates</a>
+            <a href="signin.html">Account</a>
+        </nav>
+    </div>
+    
     <div class="container">
         <div class="header">
-            <h1>🔑 Access Code Recovery</h1>
-            <p>Enter your email to recover your RgentAI access code and view usage statistics</p>
+            <h1>Access Code Recovery</h1>
+            <p>Enter your email to receive your RgentAI access code via email</p>
         </div>
 
         <div id="message" class="message"></div>
@@ -223,12 +280,10 @@
         </div>
 
         <div class="features">
-            <h3>What you'll receive:</h3>
+            <h3>What you'll receive via email:</h3>
             <ul>
-                <li>Your unique RgentAI access code</li>
-                <li>Current usage statistics</li>
-                <li>Account information</li>
-                <li>Billing portal access</li>
+                <li>📧 Your unique RgentAI access code</li>
+                <li>📊 Current usage statistics</li>
             </ul>
         </div>
 

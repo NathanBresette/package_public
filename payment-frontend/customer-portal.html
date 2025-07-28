@@ -11,22 +11,17 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
             color: #333; 
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         
         .navbar { 
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
             padding: 24px 40px 16px 40px; 
             background: rgba(255,255,255,0.95); 
             box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
+            position: sticky; 
+            top: 0; 
             z-index: 10; 
         }
         
@@ -56,7 +51,7 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             max-width: 500px;
             width: 90%;
-            margin-top: 80px;
+            margin: 40px auto;
         }
         
         .header {
@@ -215,12 +210,13 @@
             <a href="installation.html">Installation</a>
             <a href="data-security.html">Data Security</a>
             <a href="updates.html">Dev Updates</a>
+            <a href="signin.html">Account</a>
         </nav>
     </div>
 
     <div class="container">
         <div class="header">
-            <h1>⚙️ Customer Portal</h1>
+            <h1>Customer Portal</h1>
             <p>Manage your RgentAI account, billing, and access your code</p>
         </div>
 
@@ -238,18 +234,15 @@
         <div class="features">
             <h3>What you can do in the Customer Portal:</h3>
             <ul>
-                <li>🔑 View your RgentAI access code</li>
-                <li>View and update billing information</li>
-                <li>Download invoices and receipts</li>
-                <li>Update payment methods</li>
-                <li>Cancel or modify subscriptions</li>
-                <li>View account history</li>
-                <li>Update contact information</li>
+                <li>📄 Download invoices and receipts</li>
+                <li>💳 Update payment methods</li>
+                <li>❌ Cancel or change your subscription plan</li>
+                <li>📊 View account history and usage</li>
+                <li>📧 Update contact information</li>
             </ul>
         </div>
 
         <div class="footer">
-            <p>Your access code is stored securely in your Stripe account metadata</p>
             <p>Need help? <a href="mailto:support@rgentai.com">Contact support</a></p>
         </div>
     </div>
