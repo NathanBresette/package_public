@@ -1395,20 +1395,13 @@ async def create_stripe_checkout(request: LookupKeyRequest):
                 'price': prices.data[0].id,
                 'quantity': 1,
             }],
-            mode='subscription',
+            mode='payment' if is_free_trial else 'subscription',  # Use payment mode for one-time free trial
             success_url='https://rgentai.com/success.html?session_id={CHECKOUT_SESSION_ID}',
             cancel_url='https://rgentai.com/plans?cancelled=true',
             metadata={
                 'lookup_key': request.lookup_key,
                 'customer_email': request.customer_email or ''
-            },
-            # For free trial, add trial period
-            subscription_data={
-                'trial_period_days': 7 if is_free_trial else None,
-                'metadata': {
-                    'plan_type': 'free_trial' if is_free_trial else 'paid'
-                }
-            } if is_free_trial else None
+            }
         )
         
         return {"url": checkout_session.url}

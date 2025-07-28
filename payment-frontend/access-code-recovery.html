@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RgentAI - Access Code Recovery</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
     <style>
         * {
             margin: 0;
@@ -36,6 +37,16 @@
             font-weight: 700; 
             color: #667eea; 
             letter-spacing: 1px; 
+            display: flex; 
+            align-items: center; 
+        }
+        
+        .navbar .logo img { 
+            width: 32px; 
+            height: 32px; 
+            border-radius: 50%; 
+            margin-right: 12px; 
+            object-fit: cover; 
         }
         
         .navbar nav a { 
@@ -239,7 +250,10 @@
 </head>
 <body>
     <div class="navbar">
-        <div class="logo">RgentAI</div>
+        <div class="logo">
+            <img src="images/logo.png" alt="RgentAI Logo">
+            RgentAI
+        </div>
         <nav>
             <a href="homepage.html">Home</a>
             <a href="plans.html">Plans & Pricing</a>
@@ -381,5 +395,9 @@
             document.getElementById('message').style.display = 'none';
         }
     </script>
+    
+    <div class="footer">
+        &copy; 2025 RgentAI. All rights reserved.
+    </div>
 </body>
 </html> 
