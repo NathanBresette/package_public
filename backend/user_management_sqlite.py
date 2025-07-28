@@ -260,6 +260,10 @@ class UserManagerSQLite:
     def record_usage(self, access_code: str, usage_info: Dict) -> bool:
         """Record usage for cost tracking"""
         try:
+            print(f"DEBUG: UserManager recording usage for {access_code}")
+            print(f"DEBUG: Input tokens: {usage_info.get('input_tokens', 0)}")
+            print(f"DEBUG: Output tokens: {usage_info.get('output_tokens', 0)}")
+            
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
@@ -267,6 +271,8 @@ class UserManagerSQLite:
                 input_tokens = usage_info.get('input_tokens', 0)
                 output_tokens = usage_info.get('output_tokens', 0)
                 total_tokens = input_tokens + output_tokens
+                
+                print(f"DEBUG: Calculated total tokens: {total_tokens}")
                 
                 # Insert usage record
                 cursor.execute('''
@@ -308,6 +314,7 @@ class UserManagerSQLite:
                 ))
                 
                 conn.commit()
+                print(f"DEBUG: Successfully recorded usage for {access_code}")
                 return True
                 
         except Exception as e:
@@ -317,6 +324,8 @@ class UserManagerSQLite:
     def get_user_stats(self, access_code: str) -> Dict:
         """Get comprehensive user statistics"""
         try:
+            print(f"DEBUG: Getting user stats for {access_code}")
+            
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
@@ -325,6 +334,7 @@ class UserManagerSQLite:
                 user = cursor.fetchone()
                 
                 if not user:
+                    print(f"DEBUG: No user found for {access_code}")
                     return {}
                 
                 # Get today's usage
@@ -340,6 +350,8 @@ class UserManagerSQLite:
                 ''', (access_code, today))
                 today_stats = cursor.fetchone()
                 
+                print(f"DEBUG: Today's stats: {today_stats}")
+                
                 # Get this month's usage
                 month_start = datetime.now().replace(day=1).date().isoformat()
                 cursor.execute('''
@@ -353,7 +365,7 @@ class UserManagerSQLite:
                 ''', (access_code, month_start))
                 month_stats = cursor.fetchone()
                 
-                return {
+                result = {
                     'access_code': user['access_code'],
                     'user_name': user['user_name'],
                     'email': user['email'],
@@ -380,6 +392,9 @@ class UserManagerSQLite:
                     'requests_remaining': max(0, user['daily_limit'] - today_stats['requests']),
                     'budget_remaining': max(0, user['monthly_budget'] - month_stats['cost'])
                 }
+                
+                print(f"DEBUG: Returning stats: {result}")
+                return result
                 
         except Exception as e:
             print(f"Error getting user stats: {e}")

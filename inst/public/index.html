@@ -942,11 +942,19 @@
                 const response = await fetch(`https://rgent.onrender.com/usage?access_code=${accessCode}`);
                 const data = await response.json();
 
+                console.log('Stats response:', data); // Debug logging
+
                 if (response.ok) {
                     // Show today's token usage and cost
-                    document.getElementById('input-tokens').textContent = data.today_input_tokens || 0;
-                    document.getElementById('output-tokens').textContent = data.today_output_tokens || 0;
-                    document.getElementById('total-cost').textContent = `$${(data.today_cost || 0).toFixed(4)}`;
+                    const inputTokens = data.today_input_tokens || 0;
+                    const outputTokens = data.today_output_tokens || 0;
+                    const totalCost = data.today_cost || 0;
+                    
+                    console.log('Token stats:', { inputTokens, outputTokens, totalCost }); // Debug logging
+                    
+                    document.getElementById('input-tokens').textContent = inputTokens;
+                    document.getElementById('output-tokens').textContent = outputTokens;
+                    document.getElementById('total-cost').textContent = `$${totalCost.toFixed(4)}`;
                 }
             } catch (error) {
                 console.error('Failed to load stats:', error);

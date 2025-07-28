@@ -192,6 +192,8 @@ def validate_access_code(access_code: str) -> bool:
 def track_usage(access_code: str, usage_info: dict = None):
     """Track usage for an access code using user manager"""
     if usage_info:
+        print(f"DEBUG: Tracking usage for {access_code}")
+        print(f"DEBUG: Usage info: {usage_info}")
         user_manager.record_usage(access_code, usage_info)
 
 def get_usage_stats(access_code: str = None):
