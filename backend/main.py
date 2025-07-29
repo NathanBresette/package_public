@@ -735,8 +735,8 @@ async def chat_with_ai_stream(request: ChatRequest):
                 #     request.context_type
                 # )
             
-            # Retrieve relevant context from memory-only processing (no persistent data)
-            retrieved_contexts = memory_context.get_session_contexts(request.access_code)
+            # Retrieve relevant context from PostgreSQL storage
+            retrieved_contexts = user_manager.retrieve_relevant_context(request.access_code, request.prompt, 5)
             
             # Build enhanced prompt with summarized context
             enhanced_prompt = request.prompt
