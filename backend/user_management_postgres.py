@@ -155,6 +155,27 @@ class UserManagerPostgreSQL:
                     )
                 ''')
                 
+                # Create contexts table - NO PII stored
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS contexts (
+                        id SERIAL PRIMARY KEY,
+                        access_code VARCHAR(50) NOT NULL,
+                        context_type VARCHAR(50) NOT NULL,
+                        content_hash VARCHAR(64) NOT NULL,
+                        content JSONB NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL,
+                        FOREIGN KEY (access_code) REFERENCES users (access_code),
+                        UNIQUE(access_code, content_hash)
+                    )
+                ''')
+                
+                # Create indexes for contexts table
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_contexts_access_code ON contexts(access_code)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_contexts_expires_at ON contexts(expires_at)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_contexts_content_hash ON contexts(content_hash)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_contexts_created_at ON contexts(created_at)')
+                
                 # Add new columns if they don't exist (for existing databases)
                 try:
                     cursor.execute('ALTER TABLE users ADD COLUMN total_input_tokens INTEGER DEFAULT 0')
@@ -615,6 +636,219 @@ class UserManagerPostgreSQL:
         except Exception as e:
             print(f"Error renewing subscription: {e}")
             return False
+    
+    # Context Management Methods
+    def store_context(self, access_code: str, context_data: dict, context_type: str = "general") -> Optional[str]:
+        """Store context data with automatic expiration"""
+        try:
+            import hashlib
+            import json
+            from datetime import datetime, timedelta
+            
+            # Get expiration time from environment (default 3 hours)
+            expiration_minutes = int(os.getenv("CONTEXT_EXPIRATION_MINUTES", "180"))
+            expires_at = datetime.now() + timedelta(minutes=expiration_minutes)
+            
+            # Generate content hash for deduplication
+            content_json = json.dumps(context_data, sort_keys=True)
+            content_hash = hashlib.md5(content_json.encode()).hexdigest()
+            
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Check if context already exists
+                cursor.execute('''
+                    SELECT id FROM contexts 
+                    WHERE access_code = %s AND content_hash = %s
+                ''', (access_code, content_hash))
+                
+                if cursor.fetchone():
+                    print(f"Context already exists for {access_code}")
+                    return content_hash
+                
+                # Store new context
+                cursor.execute('''
+                    INSERT INTO contexts (access_code, context_type, content_hash, content, expires_at)
+                    VALUES (%s, %s, %s, %s, %s)
+                ''', (access_code, context_type, content_hash, content_json, expires_at))
+                
+                # Update user's context count
+                cursor.execute('''
+                    UPDATE users 
+                    SET context_count = (
+                        SELECT COUNT(*) FROM contexts 
+                        WHERE access_code = %s AND expires_at > NOW()
+                    )
+                    WHERE access_code = %s
+                ''', (access_code, access_code))
+                
+                conn.commit()
+                
+                # Dynamic expiration message
+                hours = expiration_minutes // 60
+                minutes = expiration_minutes % 60
+                if hours > 0:
+                    expiration_msg = f"{hours} hour{'s' if hours != 1 else ''}"
+                    if minutes > 0:
+                        expiration_msg += f" {minutes} minute{'s' if minutes != 1 else ''}"
+                else:
+                    expiration_msg = f"{minutes} minute{'s' if minutes != 1 else ''}"
+                
+                print(f"Stored context for {access_code} (expires in {expiration_msg})")
+                return content_hash
+                
+        except Exception as e:
+            print(f"Error storing context: {e}")
+            return None
+    
+    def retrieve_relevant_context(self, access_code: str, query: str, n_results: int = 5) -> List[Dict]:
+        """Retrieve relevant context data"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Clean up expired contexts first
+                cursor.execute('DELETE FROM contexts WHERE expires_at < NOW()')
+                
+                # Get recent contexts for this user
+                cursor.execute('''
+                    SELECT context_type, content, created_at 
+                    FROM contexts 
+                    WHERE access_code = %s AND expires_at > NOW()
+                    ORDER BY created_at DESC 
+                    LIMIT %s
+                ''', (access_code, n_results))
+                
+                contexts = []
+                for row in cursor.fetchall():
+                    context_type, content_json, created_at = row
+                    try:
+                        content = json.loads(content_json)
+                        contexts.append({
+                            'type': context_type,
+                            'content': content,
+                            'timestamp': created_at.isoformat() if created_at else None
+                        })
+                    except json.JSONDecodeError:
+                        print(f"Error parsing context JSON for {access_code}")
+                        continue
+                
+                return contexts
+                
+        except Exception as e:
+            print(f"Error retrieving context: {e}")
+            return []
+    
+    def get_user_context_summary(self, access_code: str) -> Dict:
+        """Get user context summary"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Clean up expired contexts first
+                cursor.execute('DELETE FROM contexts WHERE expires_at < NOW()')
+                
+                # Get context count and types
+                cursor.execute('''
+                    SELECT context_type, COUNT(*) 
+                    FROM contexts 
+                    WHERE access_code = %s AND expires_at > NOW()
+                    GROUP BY context_type
+                ''', (access_code,))
+                
+                context_types = []
+                total_count = 0
+                for context_type, count in cursor.fetchall():
+                    context_types.append(context_type)
+                    total_count += count
+                
+                # Dynamic expiration message
+                expiration_minutes = int(os.getenv("CONTEXT_EXPIRATION_MINUTES", "180"))
+                hours = expiration_minutes // 60
+                minutes = expiration_minutes % 60
+                if hours > 0:
+                    expiration_msg = f"{hours} hour{'s' if hours != 1 else ''}"
+                    if minutes > 0:
+                        expiration_msg += f" {minutes} minute{'s' if minutes != 1 else ''}"
+                else:
+                    expiration_msg = f"{minutes} minute{'s' if minutes != 1 else ''}"
+                
+                return {
+                    'access_code': access_code,
+                    'context_count': total_count,
+                    'context_types': context_types,
+                    'last_activity': datetime.now().isoformat(),
+                    'message': f'PostgreSQL context storage (expires in {expiration_msg})'
+                }
+                
+        except Exception as e:
+            print(f"Error getting context summary: {e}")
+            return {
+                'access_code': access_code,
+                'context_count': 0,
+                'context_types': [],
+                'last_activity': None,
+                'message': f'Error: {str(e)}'
+            }
+    
+    def clear_user_context(self, access_code: str):
+        """Clear all context data for a user"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM contexts WHERE access_code = %s', (access_code,))
+                deleted_count = cursor.rowcount
+                conn.commit()
+                print(f"Cleared {deleted_count} contexts for {access_code}")
+                
+        except Exception as e:
+            print(f"Error clearing user context: {e}")
+    
+    def cleanup_expired_contexts(self):
+        """Clean up all expired contexts"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM contexts WHERE expires_at < NOW()')
+                deleted_count = cursor.rowcount
+                conn.commit()
+                if deleted_count > 0:
+                    print(f"Cleaned up {deleted_count} expired contexts")
+                
+        except Exception as e:
+            print(f"Error cleaning up expired contexts: {e}")
+    
+    def get_context_database_stats(self) -> Dict:
+        """Get context database statistics"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Total contexts
+                cursor.execute('SELECT COUNT(*) FROM contexts')
+                total_contexts = cursor.fetchone()[0]
+                
+                # Active contexts (not expired)
+                cursor.execute('SELECT COUNT(*) FROM contexts WHERE expires_at > NOW()')
+                active_contexts = cursor.fetchone()[0]
+                
+                # Unique users with contexts
+                cursor.execute('SELECT COUNT(DISTINCT access_code) FROM contexts')
+                unique_users = cursor.fetchone()[0]
+                
+                expiration_minutes = int(os.getenv("CONTEXT_EXPIRATION_MINUTES", "180"))
+                
+                return {
+                    'total_contexts': total_contexts,
+                    'active_contexts': active_contexts,
+                    'unique_users': unique_users,
+                    'max_context_age_minutes': expiration_minutes,
+                    'max_contexts_per_user': int(os.getenv("MAX_CONTEXTS_PER_USER", "20"))
+                }
+                
+        except Exception as e:
+            print(f"Error getting context database stats: {e}")
+            return {'error': str(e)}
     
     def create_user(self, access_code: str, stripe_customer_id: str = "", 
                    daily_limit: int = 100, monthly_budget: float = 10.0) -> bool:

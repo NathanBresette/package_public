@@ -7,7 +7,7 @@ import httpx
 import os
 from typing import Optional, List, Dict, AsyncGenerator
 import json
-from memory_only_context import memory_context
+# Context is now handled by PostgreSQL user_manager
 from context_summarizer import ContextSummarizer
 from response_cache import SmartResponseCache
 from conversation_memory import ConversationMemory
@@ -561,11 +561,19 @@ async def chat_with_ai(request: ChatRequest):
             #     request.context_type
             # )
         
-        # Retrieve relevant context from memory-only processing (no persistent data)
-        retrieved_contexts = memory_context.get_session_contexts(request.access_code)
+        # Store context data with automatic expiration
+        if request.context_data:
+            context_id = user_manager.store_context(
+                request.access_code, 
+                request.context_data,
+                request.context_type
+            )
+        
+        # Retrieve relevant context from PostgreSQL storage
+        retrieved_contexts = user_manager.retrieve_relevant_context(request.access_code, request.prompt, 5)
         
         # Get context summary for response
-        context_summary_response = memory_context.get_user_context_summary(request.access_code)
+        context_summary_response = user_manager.get_user_context_summary(request.access_code)
         
         # Build enhanced prompt with summarized context
         enhanced_prompt = sanitized_prompt
@@ -913,16 +921,14 @@ async def memory_status():
         # Get cache stats
         cache_stats = response_cache.get_cache_stats()
         
+        # Get PostgreSQL context stats
+        context_stats = user_manager.get_context_database_stats()
+        
         return {
             "system_memory": memory_info,
             "process_memory": process_info,
-            # "sqlite_db_stats": db_stats if 'db_stats' in locals() else {"error": "Could not get database stats"},
             "cache_stats": cache_stats,
-            # "memory_limits": {
-            #     "max_contexts_per_user": sqlite_rag.max_contexts_per_user,
-            #     "max_total_contexts": sqlite_rag.max_total_contexts,
-            #     "max_context_age_days": sqlite_rag.max_context_age_days
-            # }
+            "postgres_context": context_stats
         }
     except Exception as e:
         return {"error": str(e)}
@@ -934,8 +940,8 @@ async def cleanup_memory():
         # Force garbage collection
         collected = gc.collect()
         
-        # Clean up old SQLite database data
-        # sqlite_rag._cleanup_old_data()
+        # Clean up expired PostgreSQL context data
+        user_manager.cleanup_expired_contexts()
         
         # Get memory status after cleanup
         memory = psutil.virtual_memory()
@@ -943,6 +949,7 @@ async def cleanup_memory():
         return {
             "success": True,
             "garbage_collected": collected,
+            "context_cleanup": "Expired contexts cleaned up",
             "memory_after_cleanup": {
                 "available_gb": round(memory.available / (1024**3), 2),
                 "percent_used": memory.percent
@@ -972,83 +979,83 @@ async def get_user_usage(access_code: str):
 
 @app.post("/context/store", response_model=ContextResponse)
 async def store_context(request: ContextRequest):
-    """Store context data using memory-only processing - NO persistent storage"""
+    """Store context data using PostgreSQL with automatic expiration"""
     try:
-        # Process context in memory only - NO persistent storage
-        context_hash = memory_context.process_context(
+        # Store context with configurable expiration
+        context_id = user_manager.store_context(
             request.access_code,
             request.context_data,
             request.context_type
         )
         
-        if context_hash:
+        if context_id:
             return ContextResponse(
                 success=True,
-                message="Context processed in memory (no persistent storage)",
-                context_id=context_hash
+                message="Context stored with configurable expiration",
+                context_id=context_id
             )
         else:
             return ContextResponse(
                 success=False,
-                message="Failed to process context"
+                message="Failed to store context"
             )
     except Exception as e:
         return ContextResponse(
             success=False,
-            message=f"Context processing error: {str(e)}"
+            message=f"Context storage error: {str(e)}"
         )
 
 @app.get("/context/summary/{access_code}")
 async def get_context_summary(access_code: str):
-    """Get user context summary using memory-only processing"""
+    """Get user context summary using PostgreSQL storage"""
     if not validate_access_code(access_code):
         raise HTTPException(status_code=401, detail="Invalid access code")
     
     try:
-        summary = memory_context.get_user_context_summary(access_code)
+        summary = user_manager.get_user_context_summary(access_code)
         return summary
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/context/clear/{access_code}")
 async def clear_user_context(access_code: str):
-    """Clear user context using memory-only processing"""
+    """Clear user context using PostgreSQL storage"""
     if not validate_access_code(access_code):
         raise HTTPException(status_code=401, detail="Invalid access code")
     
     try:
-        memory_context.clear_session(access_code)
-        return {"success": True, "message": "Context cleared from memory"}
+        user_manager.clear_user_context(access_code)
+        return {"success": True, "message": "Context cleared from PostgreSQL storage"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/context/analytics/{access_code}")
 async def get_user_analytics(access_code: str):
-    """Get user context analytics using memory-only processing"""
+    """Get user context analytics using PostgreSQL storage"""
     if not validate_access_code(access_code):
         raise HTTPException(status_code=401, detail="Invalid access code")
     
     try:
-        analytics = memory_context.get_session_stats(access_code)
+        analytics = user_manager.get_user_context_summary(access_code)
         return analytics
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/context/search/{access_code}")
 async def search_user_context(access_code: str, q: str, context_type: str = None):
-    """Search user context using memory-only processing"""
+    """Search user context using PostgreSQL storage"""
     if not validate_access_code(access_code):
         raise HTTPException(status_code=401, detail="Invalid access code")
     
     try:
-        # For memory-only context, return session info instead of search results
-        session_stats = memory_context.get_session_stats(access_code)
+        # Search contexts using PostgreSQL storage
+        contexts = user_manager.retrieve_relevant_context(access_code, q, 10)
         return {
             "access_code": access_code,
             "search_term": q,
             "context_type_filter": context_type,
-            "message": "Memory-only context processing - no persistent search available",
-            "session_stats": session_stats
+            "contexts": contexts,
+            "message": f"PostgreSQL context search (expires in 3 hours)"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
