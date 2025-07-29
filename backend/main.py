@@ -10,7 +10,7 @@ import json
 # Context is now handled by PostgreSQL user_manager
 from context_summarizer import ContextSummarizer
 from response_cache import SmartResponseCache
-from conversation_memory import ConversationMemory
+# Conversation memory is now handled by PostgreSQL user_manager
 from stripe_billing import report_token_usage, calculate_token_cost
 # from security_config import get_cors_config, ADMIN_ACCESS_CODE, get_security_headers
 from config import get_user_manager
@@ -38,7 +38,7 @@ app = FastAPI(title="RStudio AI Backend", version="1.3.0")
 # Initialize memory-only context, context summarizer, response cache, and conversation memory
 context_summarizer = ContextSummarizer()
 response_cache = SmartResponseCache(max_cache_size=200, cache_ttl_hours=4)  # Conservative settings for memory
-conversation_memory = ConversationMemory()
+# Conversation memory is now handled by PostgreSQL user_manager
 
 
 
@@ -523,12 +523,12 @@ async def chat_with_ai(request: ChatRequest):
     
     # Start new conversation if requested or if no conversation exists
     if request.new_conversation or not conversation_id:
-        conversation_id = conversation_memory.start_conversation(request.access_code)
+        conversation_id = user_manager.start_conversation(request.access_code)
         if not conversation_id:
             raise HTTPException(status_code=500, detail="Failed to start conversation")
     
     # Get conversation history for context
-    conversation_context = conversation_memory.format_conversation_context(conversation_id, max_messages=5)
+    conversation_context = user_manager.format_conversation_context(conversation_id, max_messages=5)
     
     # Debug: Log the request structure
     print(f"DEBUG: Request context_data type: {type(request.context_data)}")
@@ -631,8 +631,8 @@ async def chat_with_ai(request: ChatRequest):
         response, usage_info = await call_claude_api(enhanced_prompt)
         
         # Store messages in conversation memory
-        conversation_memory.add_message(conversation_id, "user", request.prompt, request.context_data, request.context_type)
-        conversation_memory.add_message(conversation_id, "assistant", response, request.context_data, request.context_type)
+        user_manager.add_message(conversation_id, "user", request.prompt, request.context_data, request.context_type)
+        user_manager.add_message(conversation_id, "assistant", response, request.context_data, request.context_type)
         
         # Cache the response if appropriate (only for non-conversational queries)
         if request.context_data and not conversation_context.strip():
@@ -705,12 +705,12 @@ async def chat_with_ai_stream(request: ChatRequest):
     
     # Start new conversation if requested or if no conversation exists
     if request.new_conversation or not conversation_id:
-        conversation_id = conversation_memory.start_conversation(request.access_code)
+        conversation_id = user_manager.start_conversation(request.access_code)
         if not conversation_id:
             raise HTTPException(status_code=500, detail="Failed to start conversation")
     
     # Get conversation history for context
-    conversation_context = conversation_memory.format_conversation_context(conversation_id, max_messages=5)
+    conversation_context = user_manager.format_conversation_context(conversation_id, max_messages=5)
     
     async def generate_stream() -> AsyncGenerator[str, None]:
         print(f"DEBUG: Starting stream generation for conversation {conversation_id}")
@@ -803,8 +803,8 @@ async def chat_with_ai_stream(request: ChatRequest):
             yield f"data: {json.dumps({'chunk': '', 'done': True, 'total_tokens': input_tokens + output_tokens, 'conversation_id': conversation_id})}\n\n"
             
             # Store messages in conversation memory
-            conversation_memory.add_message(conversation_id, "user", request.prompt, request.context_data, request.context_type)
-            conversation_memory.add_message(conversation_id, "assistant", full_response, request.context_data, request.context_type)
+            user_manager.add_message(conversation_id, "user", request.prompt, request.context_data, request.context_type)
+            user_manager.add_message(conversation_id, "assistant", full_response, request.context_data, request.context_type)
             
             # Cache the response if appropriate (only for non-conversational queries)
             if request.context_data and not conversation_context.strip():
@@ -1070,7 +1070,7 @@ async def get_user_conversations(access_code: str):
         if not is_valid:
             raise HTTPException(status_code=401, detail=message)
         
-        conversations = conversation_memory.get_user_conversations(access_code)
+        conversations = user_manager.get_user_conversations(access_code)
         return {"conversations": conversations}
         
     except Exception as e:
@@ -1085,9 +1085,9 @@ async def get_active_conversation(access_code: str):
         if not is_valid:
             raise HTTPException(status_code=401, detail=message)
         
-        conversation_id = conversation_memory.get_active_conversation(access_code)
+        conversation_id = user_manager.get_active_conversation(access_code)
         if conversation_id:
-            history = conversation_memory.get_conversation_history(conversation_id)
+            history = user_manager.get_conversation_history(conversation_id)
             return {"conversation_id": conversation_id, "history": history}
         else:
             return {"conversation_id": None, "history": []}
@@ -1104,7 +1104,7 @@ async def delete_conversation(conversation_id: str, access_code: str):
         if not is_valid:
             raise HTTPException(status_code=401, detail=message)
         
-        success = conversation_memory.delete_conversation(conversation_id)
+        success = user_manager.delete_conversation(conversation_id)
         if success:
             return {"success": True, "message": "Conversation deleted"}
         else:
@@ -1122,7 +1122,7 @@ async def clear_conversation(conversation_id: str, access_code: str):
         if not is_valid:
             raise HTTPException(status_code=401, detail=message)
         
-        success = conversation_memory.clear_conversation(conversation_id)
+        success = user_manager.clear_conversation(conversation_id)
         if success:
             return {"success": True, "message": "Conversation cleared"}
         else:

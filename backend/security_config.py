@@ -42,8 +42,7 @@ LOG_SENSITIVE_DATA = False  # Set to False in production
 # API Key Configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Database Security
-SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "./rag_context.db")
+# Database Security (PostgreSQL only)
 ENCRYPT_DB = os.getenv("ENCRYPT_DB", "false").lower() == "true"
 
 # Production Security Checklist

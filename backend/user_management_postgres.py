@@ -205,11 +205,45 @@ class UserManagerPostgreSQL:
                     if "already exists" not in str(e):
                         print(f"⚠️ Could not add output_tokens column: {e}")
                 
+                # Create conversation tables for PostgreSQL conversation memory
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id SERIAL PRIMARY KEY,
+                        access_code VARCHAR(50) NOT NULL,
+                        conversation_id VARCHAR(64) UNIQUE NOT NULL,
+                        title VARCHAR(255),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        message_count INTEGER DEFAULT 0,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        FOREIGN KEY (access_code) REFERENCES users(access_code)
+                    )
+                ''')
+                
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS conversation_messages (
+                        id SERIAL PRIMARY KEY,
+                        conversation_id VARCHAR(64) NOT NULL,
+                        role VARCHAR(20) NOT NULL,  -- 'user' or 'assistant'
+                        content TEXT NOT NULL,
+                        timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        context_data JSONB,
+                        context_type VARCHAR(50) DEFAULT 'general',
+                        FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id) ON DELETE CASCADE
+                    )
+                ''')
+                
                 # Create indexes for better performance
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_access_code ON users(access_code)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_stripe_customer ON users(stripe_customer_id)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_usage_access_code ON usage_records(access_code)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_usage_timestamp ON usage_records(timestamp)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_conversations_access_code ON conversations(access_code)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_conversations_id ON conversations(conversation_id)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_conversations_active ON conversations(is_active)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON conversation_messages(conversation_id)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON conversation_messages(timestamp)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_role ON conversation_messages(role)')
                 
                 conn.commit()
                 print("✅ PostgreSQL database schema created successfully (PII-free)!")
@@ -914,6 +948,284 @@ class UserManagerPostgreSQL:
         except Exception as e:
             print(f"Error updating user status: {e}")
             return False
+
+    # PostgreSQL Conversation Memory Methods
+    def start_conversation(self, access_code: str, title: str = None) -> str:
+        """Start a new conversation and return conversation ID"""
+        try:
+            import hashlib
+            from datetime import datetime
+            
+            conversation_id = hashlib.md5(f"{access_code}_{datetime.now().isoformat()}".encode()).hexdigest()
+            
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO conversations (access_code, conversation_id, title, last_updated)
+                    VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                ''', (access_code, conversation_id, title or "New Conversation"))
+                
+                conn.commit()
+            
+            # Enforce memory limits
+            self._enforce_conversation_limits(access_code)
+            
+            return conversation_id
+            
+        except Exception as e:
+            print(f"Error starting conversation: {e}")
+            return None
+    
+    def add_message(self, conversation_id: str, role: str, content: str, 
+                   context_data: Dict = None, context_type: str = "general") -> bool:
+        """Add a message to a conversation"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Add message
+                cursor.execute('''
+                    INSERT INTO conversation_messages (conversation_id, role, content, context_data, context_type)
+                    VALUES (%s, %s, %s, %s, %s)
+                ''', (
+                    conversation_id, 
+                    role, 
+                    content, 
+                    json.dumps(context_data) if context_data else None,
+                    context_type
+                ))
+                
+                # Update conversation metadata
+                cursor.execute('''
+                    UPDATE conversations 
+                    SET message_count = message_count + 1, last_updated = CURRENT_TIMESTAMP
+                    WHERE conversation_id = %s
+                ''', (conversation_id,))
+                
+                conn.commit()
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error adding message: {e}")
+            return False
+    
+    def get_conversation_history(self, conversation_id: str, max_messages: int = 10) -> List[Dict]:
+        """Get recent conversation history"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT role, content, context_data, context_type, timestamp
+                    FROM conversation_messages 
+                    WHERE conversation_id = %s
+                    ORDER BY timestamp DESC
+                    LIMIT %s
+                ''', (conversation_id, max_messages))
+                
+                messages = []
+                for row in cursor.fetchall():
+                    role, content, context_data, context_type, timestamp = row
+                    messages.append({
+                        'role': role,
+                        'content': content,
+                        'context_data': json.loads(context_data) if context_data else None,
+                        'context_type': context_type,
+                        'timestamp': timestamp.isoformat() if timestamp else None
+                    })
+                
+                # Return in chronological order (oldest first)
+                return list(reversed(messages))
+                
+        except Exception as e:
+            print(f"Error getting conversation history: {e}")
+            return []
+    
+    def get_active_conversation(self, access_code: str) -> Optional[str]:
+        """Get the most recent active conversation for a user"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT conversation_id 
+                    FROM conversations 
+                    WHERE access_code = %s AND is_active = TRUE
+                    ORDER BY last_updated DESC
+                    LIMIT 1
+                ''', (access_code,))
+                
+                result = cursor.fetchone()
+                return result[0] if result else None
+                
+        except Exception as e:
+            print(f"Error getting active conversation: {e}")
+            return None
+    
+    def get_user_conversations(self, access_code: str) -> List[Dict]:
+        """Get all conversations for a user"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT conversation_id, title, created_at, last_updated, message_count
+                    FROM conversations 
+                    WHERE access_code = %s AND is_active = TRUE
+                    ORDER BY last_updated DESC
+                ''', (access_code,))
+                
+                conversations = []
+                for row in cursor.fetchall():
+                    conv_id, title, created_at, last_updated, message_count = row
+                    conversations.append({
+                        'conversation_id': conv_id,
+                        'title': title,
+                        'created_at': created_at.isoformat() if created_at else None,
+                        'last_updated': last_updated.isoformat() if last_updated else None,
+                        'message_count': message_count
+                    })
+                
+                return conversations
+                
+        except Exception as e:
+            print(f"Error getting user conversations: {e}")
+            return []
+    
+    def clear_conversation(self, conversation_id: str) -> bool:
+        """Clear all messages from a conversation"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM conversation_messages WHERE conversation_id = %s', (conversation_id,))
+                cursor.execute('''
+                    UPDATE conversations 
+                    SET message_count = 0, last_updated = CURRENT_TIMESTAMP
+                    WHERE conversation_id = %s
+                ''', (conversation_id,))
+                
+                conn.commit()
+            return True
+            
+        except Exception as e:
+            print(f"Error clearing conversation: {e}")
+            return False
+    
+    def delete_conversation(self, conversation_id: str) -> bool:
+        """Delete a conversation and all its messages"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM conversation_messages WHERE conversation_id = %s', (conversation_id,))
+                cursor.execute('DELETE FROM conversations WHERE conversation_id = %s', (conversation_id,))
+                
+                conn.commit()
+            return True
+            
+        except Exception as e:
+            print(f"Error deleting conversation: {e}")
+            return False
+    
+    def format_conversation_context(self, conversation_id: str, max_messages: int = 5) -> str:
+        """Format conversation history as context for AI"""
+        try:
+            messages = self.get_conversation_history(conversation_id, max_messages)
+            
+            if not messages:
+                return ""
+            
+            context = "\n\n=== CONVERSATION HISTORY ===\n"
+            
+            for i, msg in enumerate(messages, 1):
+                role_emoji = "👤" if msg['role'] == 'user' else "🤖"
+                context += f"\n{role_emoji} {msg['role'].title()} (Message {i}):\n{msg['content']}\n"
+                
+                # Add context data if available
+                if msg['context_data']:
+                    context += f"Context: {json.dumps(msg['context_data'], indent=2)[:200]}...\n"
+            
+            return context
+            
+        except Exception as e:
+            print(f"Error formatting conversation context: {e}")
+            return ""
+    
+    def _enforce_conversation_limits(self, access_code: str):
+        """Enforce memory limits by removing oldest conversations"""
+        try:
+            max_conversations_per_user = 10
+            
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get count of conversations for this user
+                cursor.execute('''
+                    SELECT COUNT(*) FROM conversations WHERE access_code = %s AND is_active = TRUE
+                ''', (access_code,))
+                count = cursor.fetchone()[0]
+                
+                if count > max_conversations_per_user:
+                    # Get oldest conversations to remove
+                    cursor.execute('''
+                        SELECT conversation_id FROM conversations 
+                        WHERE access_code = %s AND is_active = TRUE 
+                        ORDER BY last_updated ASC 
+                        LIMIT %s
+                    ''', (access_code, count - max_conversations_per_user))
+                    
+                    old_conversations = [row[0] for row in cursor.fetchall()]
+                    
+                    # Delete messages from old conversations
+                    for conv_id in old_conversations:
+                        cursor.execute('DELETE FROM conversation_messages WHERE conversation_id = %s', (conv_id,))
+                    
+                    # Mark conversations as inactive
+                    if old_conversations:
+                        placeholders = ','.join(['%s'] * len(old_conversations))
+                        cursor.execute(f'''
+                            UPDATE conversations 
+                            SET is_active = FALSE 
+                            WHERE conversation_id IN ({placeholders})
+                        ''', old_conversations)
+                    
+                    print(f"Enforced memory limits for {access_code}: removed {len(old_conversations)} old conversations")
+                
+                conn.commit()
+                
+        except Exception as e:
+            print(f"Error enforcing conversation limits: {e}")
+    
+    def get_conversation_database_stats(self) -> Dict:
+        """Get database statistics for conversation memory"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get conversation stats
+                cursor.execute('SELECT COUNT(*) FROM conversations WHERE is_active = TRUE')
+                active_conversations = cursor.fetchone()[0]
+                
+                cursor.execute('SELECT COUNT(*) FROM conversation_messages')
+                total_messages = cursor.fetchone()[0]
+                
+                cursor.execute('SELECT COUNT(DISTINCT access_code) FROM conversations WHERE is_active = TRUE')
+                unique_users = cursor.fetchone()[0]
+                
+                # Get size estimate
+                cursor.execute('''
+                    SELECT pg_size_pretty(pg_total_relation_size('conversations') + pg_total_relation_size('conversation_messages'))
+                ''')
+                table_size = cursor.fetchone()[0]
+                
+                return {
+                    'active_conversations': active_conversations,
+                    'total_messages': total_messages,
+                    'unique_users': unique_users,
+                    'table_size': table_size,
+                    'storage_type': 'PostgreSQL'
+                }
+                
+        except Exception as e:
+            print(f"Error getting conversation database stats: {e}")
+            return {}
 
 # Create global instance
 user_manager = UserManagerPostgreSQL() 
