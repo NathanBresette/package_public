@@ -1164,7 +1164,19 @@
         async function loadInitialContextAndWelcome() {
             console.log('Loading initial context and sending welcome message...');
             
-            // Load context summary
+            // Fetch current RStudio context immediately when access is granted
+            let contextData = null;
+            try {
+                const contextResponse = await fetch('/context');
+                if (contextResponse.ok) {
+                    contextData = await contextResponse.json();
+                    console.log('Current RStudio context captured:', contextData);
+                }
+            } catch (contextError) {
+                console.log('Could not fetch RStudio context:', contextError);
+            }
+            
+            // Load context summary from PostgreSQL
             let contextSummary = null;
             try {
                 const response = await fetch(`https://rgent.onrender.com/context/summary/${accessCode}`);
@@ -1176,11 +1188,11 @@
                 console.log('No previous context available or error loading context:', error);
             }
             
-            // Send welcome message with context info
-            await sendWelcomeMessage(contextSummary);
+            // Send welcome message with fresh context
+            await sendWelcomeMessage(contextSummary, contextData);
         }
         
-        async function sendWelcomeMessage(contextSummary) {
+        async function sendWelcomeMessage(contextSummary, freshContextData = null) {
             try {
                 // Create welcome prompt
                 let welcomePrompt = "Hello! I'm your RStudio AI Assistant. I'm here to help you with R programming, data analysis, and any questions you have about your code.";
@@ -1196,15 +1208,17 @@
                 // Add typing indicator
                 const typingMessage = addMessage('', false, true);
                 
-                // Fetch current RStudio context
-                let contextData = null;
-                try {
-                    const contextResponse = await fetch('/context');
-                    if (contextResponse.ok) {
-                        contextData = await contextResponse.json();
+                // Use fresh context data if provided, otherwise fetch current RStudio context
+                let contextData = freshContextData;
+                if (!contextData) {
+                    try {
+                        const contextResponse = await fetch('/context');
+                        if (contextResponse.ok) {
+                            contextData = await contextResponse.json();
+                        }
+                    } catch (contextError) {
+                        console.log('Could not fetch RStudio context:', contextError);
                     }
-                } catch (contextError) {
-                    console.log('Could not fetch RStudio context:', contextError);
                 }
                 
                 // Send welcome message to backend
@@ -1297,7 +1311,7 @@
             }
         }
         
-        function startNewConversation() {
+        async function startNewConversation() {
             // Clear current conversation
             currentConversationId = null;
             
@@ -1312,9 +1326,20 @@
             
             showStatus('Started new conversation', 'success');
             
-            // Send welcome message for new conversation
-            setTimeout(() => {
-                sendWelcomeMessage();
+            // Fetch fresh context and send welcome message for new conversation
+            setTimeout(async () => {
+                let freshContextData = null;
+                try {
+                    const contextResponse = await fetch('/context');
+                    if (contextResponse.ok) {
+                        freshContextData = await contextResponse.json();
+                        console.log('Fresh RStudio context captured for new conversation:', freshContextData);
+                    }
+                } catch (contextError) {
+                    console.log('Could not fetch RStudio context for new conversation:', contextError);
+                }
+                
+                await sendWelcomeMessage(null, freshContextData);
             }, 500);
         }
 
